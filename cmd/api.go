@@ -5,6 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	repo "github.com/carloscfgos1980/ecom-api/internal/database"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/carloscfgos1980/ecom-api/internal/products"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -28,6 +32,10 @@ func (app *application) mount() http.Handler {
 		w.Write([]byte("all good for now"))
 	})
 
+	productService := products.NewService(*repo.New(app.db))
+	productsHandler := products.NewHandler(productService)
+	r.Get("/products", productsHandler.GetProducts)
+
 	return r
 }
 
@@ -46,6 +54,7 @@ func (app *application) run(h http.Handler) error {
 
 type application struct {
 	config config
+	db     *pgx.Conn
 }
 
 type config struct {
