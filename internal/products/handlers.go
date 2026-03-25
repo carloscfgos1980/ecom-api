@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	json "github.com/carloscfgos1980/ecom-api/internal"
+	"github.com/carloscfgos1980/ecom-api/internal/json"
 	"github.com/go-chi/chi/v5"
 )
 
