@@ -27,7 +27,7 @@ func (q *Queries) CreateOrder(ctx context.Context, customerID int64) (Order, err
 const createOrderItem = `-- name: CreateOrderItem :one
 INSERT INTO order_items (order_id, product_id, quantity, price_in_cents)
 VALUES ($1, $2, $3, $4)
-RETURNING id, order_id, product_id, quantity, price_in_cents
+RETURNING id, order_id, product_id, quantity, price_in_cents, subtotal_in_cents
 `
 
 type CreateOrderItemParams struct {
@@ -51,78 +51,83 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		&i.ProductID,
 		&i.Quantity,
 		&i.PriceInCents,
+		&i.SubtotalInCents,
 	)
 	return i, err
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT o.id, o.customer_id, o.created_at,
-       json_agg(json_build_object(
-           'id', oi.id,
-           'product_id', oi.product_id,
-           'quantity', oi.quantity,
-           'price_in_cents', oi.price_in_cents
-       )) AS items
-FROM orders o
-JOIN order_items oi ON o.id = oi.order_id
-WHERE o.id = $1
-GROUP BY o.id
+SELECT id, customer_id, created_at FROM orders
+WHERE id = $1
 `
 
-type GetOrderByIDRow struct {
-	ID         int64
-	CustomerID int64
-	CreatedAt  pgtype.Timestamptz
-	Items      []byte
-}
-
-func (q *Queries) GetOrderByID(ctx context.Context, id int64) (GetOrderByIDRow, error) {
+func (q *Queries) GetOrderByID(ctx context.Context, id int64) (Order, error) {
 	row := q.db.QueryRow(ctx, getOrderByID, id)
-	var i GetOrderByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.CustomerID,
-		&i.CreatedAt,
-		&i.Items,
-	)
+	var i Order
+	err := row.Scan(&i.ID, &i.CustomerID, &i.CreatedAt)
 	return i, err
 }
 
-const getOrders = `-- name: GetOrders :many
-SELECT o.id, o.customer_id, o.created_at,
-       json_agg(json_build_object(
-           'id', oi.id,
-           'product_id', oi.product_id,
-           'quantity', oi.quantity,
-           'price_in_cents', oi.price_in_cents
-       )) AS items
-FROM orders o
-JOIN order_items oi ON o.id = oi.order_id
-GROUP BY o.id
+const getOrderItemsByOrderID = `-- name: GetOrderItemsByOrderID :many
+SELECT oi.id, oi.order_id, oi.product_id, oi.quantity, oi.price_in_cents, oi.subtotal_in_cents, p.name AS product_name 
+FROM order_items oi
+JOIN products p ON oi.product_id = p.id
+WHERE oi.order_id = $1
 `
 
-type GetOrdersRow struct {
-	ID         int64
-	CustomerID int64
-	CreatedAt  pgtype.Timestamptz
-	Items      []byte
+type GetOrderItemsByOrderIDRow struct {
+	ID              int64
+	OrderID         int64
+	ProductID       int64
+	Quantity        int32
+	PriceInCents    int32
+	SubtotalInCents pgtype.Int4
+	ProductName     string
 }
 
-func (q *Queries) GetOrders(ctx context.Context) ([]GetOrdersRow, error) {
+func (q *Queries) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]GetOrderItemsByOrderIDRow, error) {
+	rows, err := q.db.Query(ctx, getOrderItemsByOrderID, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOrderItemsByOrderIDRow
+	for rows.Next() {
+		var i GetOrderItemsByOrderIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrderID,
+			&i.ProductID,
+			&i.Quantity,
+			&i.PriceInCents,
+			&i.SubtotalInCents,
+			&i.ProductName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOrders = `-- name: GetOrders :many
+SELECT id, customer_id, created_at FROM orders
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetOrders(ctx context.Context) ([]Order, error) {
 	rows, err := q.db.Query(ctx, getOrders)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetOrdersRow
+	var items []Order
 	for rows.Next() {
-		var i GetOrdersRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.CustomerID,
-			&i.CreatedAt,
-			&i.Items,
-		); err != nil {
+		var i Order
+		if err := rows.Scan(&i.ID, &i.CustomerID, &i.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -135,7 +140,7 @@ func (q *Queries) GetOrders(ctx context.Context) ([]GetOrdersRow, error) {
 
 const updateProductStock = `-- name: UpdateProductStock :exec
 UPDATE products
-SET quantity = $2
+SET quantity = $2, updated_at = NOW()
 WHERE id = $1
 `
 

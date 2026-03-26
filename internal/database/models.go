@@ -15,11 +15,13 @@ type Order struct {
 }
 
 type OrderItem struct {
-	ID           int64
-	OrderID      int64
-	ProductID    int64
-	Quantity     int32
-	PriceInCents int32
+	ID              int64
+	OrderID         int64
+	ProductID       int64
+	Quantity        int32
+	PriceInCents    int32
+	SubtotalInCents pgtype.Int4
+	ProductName     string
 }
 
 type Product struct {

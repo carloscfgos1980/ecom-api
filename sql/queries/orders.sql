@@ -10,32 +10,21 @@ VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetOrders :many
-SELECT o.id, o.customer_id, o.created_at,
-       json_agg(json_build_object(
-           'id', oi.id,
-           'product_id', oi.product_id,
-           'quantity', oi.quantity,
-           'price_in_cents', oi.price_in_cents
-       )) AS items
-FROM orders o
-JOIN order_items oi ON o.id = oi.order_id
-GROUP BY o.id;
+SELECT * FROM orders
+ORDER BY created_at DESC;
+
+-- name: GetOrderItemsByOrderID :many
+SELECT oi.*, p.name AS product_name 
+FROM order_items oi
+JOIN products p ON oi.product_id = p.id
+WHERE oi.order_id = $1;
 
 -- name: GetOrderByID :one
-SELECT o.id, o.customer_id, o.created_at,
-       json_agg(json_build_object(
-           'id', oi.id,
-           'product_id', oi.product_id,
-           'quantity', oi.quantity,
-           'price_in_cents', oi.price_in_cents
-       )) AS items
-FROM orders o
-JOIN order_items oi ON o.id = oi.order_id
-WHERE o.id = $1
-GROUP BY o.id;
+SELECT * FROM orders
+WHERE id = $1;
 
 -- name: UpdateProductStock :exec
 UPDATE products
-SET quantity = $2
+SET quantity = $2, updated_at = NOW()
 WHERE id = $1;  
 

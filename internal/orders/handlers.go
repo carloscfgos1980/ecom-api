@@ -64,5 +64,39 @@ func (h *handler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	json.WriteJSON(w, http.StatusOK, order)
+	orderItems, err := h.service.GetOrderItemsByOrderID(r.Context(), order.ID)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var createdAtStr string
+	if order.CreatedAt.Valid {
+		createdAtStr = order.CreatedAt.Time.Format("2006-01-02T15:04:05Z07:00")
+	}
+	response := OrderResponse{
+		ID:         order.ID,
+		CustomerID: order.CustomerID,
+		CreatedAt:  createdAtStr,
+	}
+
+	for _, item := range orderItems {
+		response.Items = append(response.Items, struct {
+			ProductID       int64  `json:"productId"`
+			ProductName     string `json:"name"`
+			Quantity        int32  `json:"quantity"`
+			PriceInCents    int32  `json:"priceInCents"`
+			SubtotalInCents int32  `json:"subtotalInCents"`
+		}{
+			ProductID:       item.ProductID,
+			ProductName:     item.ProductName,
+			Quantity:        item.Quantity,
+			PriceInCents:    item.PriceInCents,
+			SubtotalInCents: item.SubtotalInCents.Int32,
+		})
+		response.TotalInCents += item.SubtotalInCents.Int32
+	}
+
+	json.WriteJSON(w, http.StatusOK, response)
 }

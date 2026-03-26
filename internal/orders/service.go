@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -91,34 +90,23 @@ func (s *svc) PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo
 }
 
 func (s *svc) GetOrders(ctx context.Context) ([]repo.Order, error) {
-	ordersRow, err := s.repo.GetOrders(ctx)
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
-	orders := make([]repo.Order, len(ordersRow))
-	for i, row := range ordersRow {
-		orders[i] = repo.Order{
-			ID:         row.ID,
-			CustomerID: row.CustomerID,
-			CreatedAt:  row.CreatedAt,
-		}
+	defer tx.Rollback(ctx)
+
+	qtx := s.repo.WithTx(tx)
+	orders, err := qtx.GetOrders(ctx)
+	if err != nil {
+		return nil, err
 	}
+
+	tx.Commit(ctx)
 	return orders, nil
 }
 
 func (s *svc) GetOrderByID(ctx context.Context, id string) (*repo.Order, error) {
-	type response struct {
-		ID         int64
-		CustomerID int64
-		CreatedAt  string
-		Items      []struct {
-			ID           int64
-			OrderID      int64
-			ProductID    int64
-			Quantity     int64
-			PriceInCents int64
-		}
-	}
 
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -132,16 +120,47 @@ func (s *svc) GetOrderByID(ctx context.Context, id string) (*repo.Order, error) 
 		return nil, fmt.Errorf("invalid order ID: %v", err)
 	}
 
-	orderRow, err := s.repo.GetOrderByID(ctx, orderID)
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("orderRow: %+v\n", orderRow)
-	order := &repo.Order{
-		ID:         orderRow.ID,
-		CustomerID: orderRow.CustomerID,
-		CreatedAt:  orderRow.CreatedAt,
+	defer tx.Rollback(ctx)
+
+	qtx := s.repo.WithTx(tx)
+	order, err := qtx.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return nil, err
 	}
 
-	return order, nil
+	tx.Commit(ctx)
+	return &order, nil
+}
+
+func (s *svc) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]repo.OrderItem, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := s.repo.WithTx(tx)
+	itemsRow, err := qtx.GetOrderItemsByOrderID(ctx, orderID)
+	if err != nil {
+		return nil, err
+	}
+	tx.Commit(ctx)
+
+	items := make([]repo.OrderItem, len(itemsRow))
+	for i, row := range itemsRow {
+		items[i] = repo.OrderItem{
+			ID:           row.ID,
+			OrderID:      row.OrderID,
+			ProductID:    row.ProductID,
+			Quantity:     row.Quantity,
+			PriceInCents: row.PriceInCents,
+			ProductName:  row.ProductName,
+		}
+	}
+
+	return items, nil
 }

@@ -16,8 +16,23 @@ type createOrderParams struct {
 	Items      []orderItem `json:"items"`
 }
 
+type OrderResponse struct {
+	ID           int64  `json:"id"`
+	CustomerID   int64  `json:"customerId"`
+	CreatedAt    string `json:"createdAt"`
+	TotalInCents int32  `json:"totalInCents"`
+	Items        []struct {
+		ProductID       int64  `json:"productId"`
+		ProductName     string `json:"name"`
+		Quantity        int32  `json:"quantity"`
+		PriceInCents    int32  `json:"priceInCents"`
+		SubtotalInCents int32  `json:"subtotalInCents"`
+	} `json:"items"`
+}
+
 type Service interface {
 	PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo.Order, error)
 	GetOrders(ctx context.Context) ([]repo.Order, error)
 	GetOrderByID(ctx context.Context, id string) (*repo.Order, error)
+	GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]repo.OrderItem, error)
 }
