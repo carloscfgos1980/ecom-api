@@ -93,9 +93,9 @@ func (h *handler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
 			ProductName:     item.ProductName,
 			Quantity:        item.Quantity,
 			PriceInCents:    item.PriceInCents,
-			SubtotalInCents: item.SubtotalInCents.Int32,
+			SubtotalInCents: item.SubtotalInCents,
 		})
-		response.TotalInCents += item.SubtotalInCents.Int32
+		response.TotalInCents += item.SubtotalInCents
 	}
 
 	json.WriteJSON(w, http.StatusOK, response)

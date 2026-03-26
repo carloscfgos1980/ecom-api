@@ -103,7 +103,25 @@ func (s *svc) GetOrders(ctx context.Context) ([]repo.Order, error) {
 	}
 
 	tx.Commit(ctx)
-	return orders, nil
+
+	// Convert []repo.GetOrdersRow to []repo.Order
+	result := make([]repo.Order, len(orders))
+	for i, o := range orders {
+		result[i] = repo.Order{
+			ID:         o.ID,
+			CustomerID: o.CustomerID,
+			CreatedAt:  o.CreatedAt,
+			// Add other fields as needed if present in repo.Order
+			OrderItemID:     o.OrderItemID,
+			ProductID:       o.ProductID,
+			Quantity:        o.Quantity,
+			PriceInCents:    o.PriceInCents,
+			SubtotalInCents: o.SubtotalInCents,
+			ProductName:     o.ProductName,
+		}
+	}
+
+	return result, nil
 }
 
 func (s *svc) GetOrderByID(ctx context.Context, id string) (*repo.Order, error) {
@@ -127,12 +145,25 @@ func (s *svc) GetOrderByID(ctx context.Context, id string) (*repo.Order, error) 
 	defer tx.Rollback(ctx)
 
 	qtx := s.repo.WithTx(tx)
-	order, err := qtx.GetOrderByID(ctx, orderID)
+	orderRow, err := qtx.GetOrderByID(ctx, orderID)
 	if err != nil {
 		return nil, err
 	}
 
 	tx.Commit(ctx)
+
+	order := repo.Order{
+		ID:              orderRow.ID,
+		CustomerID:      orderRow.CustomerID,
+		CreatedAt:       orderRow.CreatedAt,
+		OrderItemID:     orderRow.OrderItemID,
+		ProductID:       orderRow.ProductID,
+		Quantity:        orderRow.Quantity,
+		PriceInCents:    orderRow.PriceInCents,
+		SubtotalInCents: orderRow.SubtotalInCents,
+		ProductName:     orderRow.ProductName,
+	}
+
 	return &order, nil
 }
 
