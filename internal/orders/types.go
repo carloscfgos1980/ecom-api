@@ -23,7 +23,7 @@ type OrderResponse struct {
 	TotalInCents int32  `json:"totalInCents"`
 	Items        []struct {
 		ProductID       int64  `json:"productId"`
-		ProductName     string `json:"name"`
+		ProductName     string `json:"productName"`
 		Quantity        int32  `json:"quantity"`
 		PriceInCents    int32  `json:"priceInCents"`
 		SubtotalInCents int32  `json:"subtotalInCents"`

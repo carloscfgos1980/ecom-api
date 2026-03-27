@@ -106,7 +106,7 @@ type GetOrderItemsByOrderIDRow struct {
 	ProductID       int64
 	Quantity        int32
 	PriceInCents    int32
-	SubtotalInCents pgtype.Int4
+	SubtotalInCents int32
 	ProductName     string
 }
 
@@ -139,45 +139,20 @@ func (q *Queries) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]
 }
 
 const getOrders = `-- name: GetOrders :many
-SELECT o.id, o.customer_id, o.created_at, oi.id AS order_item_id, oi.product_id, oi.quantity, oi.price_in_cents, oi.subtotal_in_cents, p.name AS product_name
-FROM orders o
-LEFT JOIN order_items oi ON o.id = oi.order_id
-LEFT JOIN products p ON oi.product_id = p.id
-ORDER BY o.created_at DESC
+SELECT id, customer_id, created_at FROM orders
+ORDER BY created_at DESC
 `
 
-type GetOrdersRow struct {
-	ID              int64
-	CustomerID      int64
-	CreatedAt       pgtype.Timestamptz
-	OrderItemID     pgtype.Int8
-	ProductID       pgtype.Int8
-	Quantity        pgtype.Int4
-	PriceInCents    pgtype.Int4
-	SubtotalInCents pgtype.Int4
-	ProductName     pgtype.Text
-}
-
-func (q *Queries) GetOrders(ctx context.Context) ([]GetOrdersRow, error) {
+func (q *Queries) GetOrders(ctx context.Context) ([]Order, error) {
 	rows, err := q.db.Query(ctx, getOrders)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetOrdersRow
+	var items []Order
 	for rows.Next() {
-		var i GetOrdersRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.CustomerID,
-			&i.CreatedAt,
-			&i.OrderItemID,
-			&i.ProductID,
-			&i.Quantity,
-			&i.PriceInCents,
-			&i.SubtotalInCents,
-			&i.ProductName,
-		); err != nil {
+		var i Order
+		if err := rows.Scan(&i.ID, &i.CustomerID, &i.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

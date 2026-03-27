@@ -11,16 +11,19 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// Service defines the interface for the orders service
 var (
 	ErrProductNotFound = errors.New("product not found")
 	ErrProductNoStock  = errors.New("product has not enough stock")
 )
 
+// Service defines the interface for the orders service
 type svc struct {
 	repo *repo.Queries
 	db   *pgx.Conn
 }
 
+// NewService creates a new service for orders
 func NewService(repo *repo.Queries, db *pgx.Conn) Service {
 	return &svc{
 		repo: repo,
@@ -28,24 +31,25 @@ func NewService(repo *repo.Queries, db *pgx.Conn) Service {
 	}
 }
 
+// PlaceOrder creates a new order with the given parameters
 func (s *svc) PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo.Order, error) {
-	// validate payload
+	// validate the request body and return a 400 Bad Request if it's invalid
 	if tempOrder.CustomerID == 0 {
 		return repo.Order{}, fmt.Errorf("customer ID is required")
 	}
 	if len(tempOrder.Items) == 0 {
 		return repo.Order{}, fmt.Errorf("at least one item is required")
 	}
-
+	// start a transaction
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return repo.Order{}, err
 	}
 	defer tx.Rollback(ctx)
-
+	// create a new Queries instance with the transaction
 	qtx := s.repo.WithTx(tx)
 
-	// create an order
+	// create the order
 	order, err := qtx.CreateOrder(ctx, tempOrder.CustomerID)
 	if err != nil {
 		return repo.Order{}, err
@@ -89,61 +93,47 @@ func (s *svc) PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo
 	return order, nil
 }
 
+// GetOrders returns all orders
 func (s *svc) GetOrders(ctx context.Context) ([]repo.Order, error) {
+	// start a transaction
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
-
+	// create a new Queries instance with the transaction
 	qtx := s.repo.WithTx(tx)
+	// get all orders
 	orders, err := qtx.GetOrders(ctx)
 	if err != nil {
 		return nil, err
 	}
-
+	// commit the transaction
 	tx.Commit(ctx)
 
-	// Convert []repo.GetOrdersRow to []repo.Order
-	result := make([]repo.Order, len(orders))
-	for i, o := range orders {
-		result[i] = repo.Order{
-			ID:         o.ID,
-			CustomerID: o.CustomerID,
-			CreatedAt:  o.CreatedAt,
-			// Add other fields as needed if present in repo.Order
-			OrderItemID:     o.OrderItemID,
-			ProductID:       o.ProductID,
-			Quantity:        o.Quantity,
-			PriceInCents:    o.PriceInCents,
-			SubtotalInCents: o.SubtotalInCents,
-			ProductName:     o.ProductName,
-		}
-	}
-
-	return result, nil
+	return orders, nil
 }
 
+// GetOrderByID returns an order by its ID
 func (s *svc) GetOrderByID(ctx context.Context, id string) (*repo.Order, error) {
-
+	// validate the order ID and return a 400 Bad Request if it's invalid
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return nil, fmt.Errorf("missing order id")
 	}
 
 	// Convert id from string to int64
-
 	orderID, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("invalid order ID: %v", err)
 	}
-
+	// start a transaction
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
-
+	// create a new Queries instance with the transaction
 	qtx := s.repo.WithTx(tx)
 	orderRow, err := qtx.GetOrderByID(ctx, orderID)
 	if err != nil {
@@ -152,19 +142,13 @@ func (s *svc) GetOrderByID(ctx context.Context, id string) (*repo.Order, error) 
 
 	tx.Commit(ctx)
 
-	order := repo.Order{
-		ID:              orderRow.ID,
-		CustomerID:      orderRow.CustomerID,
-		CreatedAt:       orderRow.CreatedAt,
-		OrderItemID:     orderRow.OrderItemID,
-		ProductID:       orderRow.ProductID,
-		Quantity:        orderRow.Quantity,
-		PriceInCents:    orderRow.PriceInCents,
-		SubtotalInCents: orderRow.SubtotalInCents,
-		ProductName:     orderRow.ProductName,
+	order := &repo.Order{
+		ID:         orderRow.ID,
+		CustomerID: orderRow.CustomerID,
+		CreatedAt:  orderRow.CreatedAt,
 	}
 
-	return &order, nil
+	return order, nil
 }
 
 func (s *svc) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]repo.OrderItem, error) {
@@ -184,12 +168,13 @@ func (s *svc) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]repo
 	items := make([]repo.OrderItem, len(itemsRow))
 	for i, row := range itemsRow {
 		items[i] = repo.OrderItem{
-			ID:           row.ID,
-			OrderID:      row.OrderID,
-			ProductID:    row.ProductID,
-			Quantity:     row.Quantity,
-			PriceInCents: row.PriceInCents,
-			ProductName:  row.ProductName,
+			ID:              row.ID,
+			OrderID:         row.OrderID,
+			ProductName:     row.ProductName,
+			ProductID:       row.ProductID,
+			Quantity:        row.Quantity,
+			PriceInCents:    row.PriceInCents,
+			SubtotalInCents: row.SubtotalInCents,
 		}
 	}
 
