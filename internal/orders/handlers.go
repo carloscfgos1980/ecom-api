@@ -26,7 +26,7 @@ func (h *handler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 	// read the request body and unmarshal it into a createOrderParams struct
 	var tempOrder createOrderParams
 	// validate the request body and return a 400 Bad Request if it's invalid
-	if err := json.Read(r, &tempOrder); err != nil {
+	if err := json.ReadJSON(r, &tempOrder); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

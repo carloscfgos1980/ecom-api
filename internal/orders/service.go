@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Service defines the interface for the orders service
+// errors that can be returned by the service
 var (
 	ErrProductNotFound = errors.New("product not found")
 	ErrProductNoStock  = errors.New("product has not enough stock")
@@ -77,7 +77,7 @@ func (s *svc) PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo
 			return repo.Order{}, err
 		}
 
-		// Challenge: Update the product stock quantity
+		// update product stock
 		newQuantity := product.Quantity - item.Quantity
 		err = qtx.UpdateProductStock(ctx, repo.UpdateProductStockParams{
 			ID:       product.ID,
