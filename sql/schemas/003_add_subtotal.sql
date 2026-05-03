@@ -1,6 +1,6 @@
 -- +goose Up
 ALTER TABLE order_items
-ADD COLUMN subtotal_in_cents INTEGER GENERATED ALWAYS AS (quantity * price_in_cents) STORED;
+ADD subtotal_in_cents AS (quantity * price_in_cents) PERSISTED;
 
 -- +goose Down
 ALTER TABLE order_items

@@ -27,7 +27,7 @@ func main() {
 	cfg := config{
 		addr: ":" + port,
 		db: dbConfig{
-			dsn: env.GetEnv("GOOSE_DBSTRING", "host=localhost user=postgres password=postgres dbname=db_ecom sslmode=disable"),
+			dsn: env.GetEnv("DB_URL", "postgres://postgres:postgres@localhost:5432/db_ecom?sslmode=disable"),
 		},
 	}
 	// initialize logger
