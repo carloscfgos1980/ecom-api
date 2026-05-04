@@ -5,6 +5,10 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/google/uuid"
+
+	"github.com/jackc/pgx/v5/pgtype"
+
 	"github.com/carloscfgos1980/ecom-api/internal/json"
 	"github.com/go-chi/chi/v5"
 )
@@ -59,13 +63,13 @@ func (h *handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	}
 	ordersResponse := make([]OrderResponse, len(orders))
 	for i, order := range orders {
-		order, err := h.service.GetOrderByID(r.Context(), fmt.Sprintf("%d", order.ID))
+		order, err := h.service.GetOrderByID(r.Context(), fmt.Sprintf("%d", order.OrderID))
 		if err != nil {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		orderItems, err := h.service.GetOrderItemsByOrderID(r.Context(), order.ID)
+		orderItems, err := h.service.GetOrderItemsByOrderID(r.Context(), order.OrderID)
 		if err != nil {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -73,46 +77,55 @@ func (h *handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 		}
 
 		items := make([]struct {
-			ProductID       int64  `json:"productId"`
-			ProductName     string `json:"productName"`
-			Quantity        int32  `json:"quantity"`
-			PriceInCents    int32  `json:"priceInCents"`
-			SubtotalInCents int32  `json:"subtotalInCents"`
+			ProductID   int64          `json:"productId"`
+			ProductName string         `json:"productName"`
+			Quantity    int32          `json:"quantity"`
+			Price       pgtype.Numeric `json:"price"`
+			Subtotal    pgtype.Numeric `json:"subtotal"`
 		}, len(orderItems))
-		var totalInCents int32
+		var total int32
 		for j, item := range orderItems {
 			items[j] = struct {
-				ProductID       int64  `json:"productId"`
-				ProductName     string `json:"productName"`
-				Quantity        int32  `json:"quantity"`
-				PriceInCents    int32  `json:"priceInCents"`
-				SubtotalInCents int32  `json:"subtotalInCents"`
+				ProductID   int64          `json:"productId"`
+				ProductName string         `json:"productName"`
+				Quantity    int32          `json:"quantity"`
+				Price       pgtype.Numeric `json:"price"`
+				Subtotal    pgtype.Numeric `json:"subtotal"`
 			}{
-				ProductID:       item.ProductID,
-				ProductName:     item.ProductName,
-				Quantity:        item.Quantity,
-				PriceInCents:    item.PriceInCents,
-				SubtotalInCents: item.SubtotalInCents,
+				ProductID:   item.ProductID,
+				ProductName: item.ProductName,
+				Quantity:    item.Quantity,
+				Price:       item.Price,
+				Subtotal:    item.Subtotal,
 			}
-			totalInCents += item.SubtotalInCents
+			// Convert subtotal to int32 and add to total
+			var subtotalInt32 int32
+			if item.Subtotal.Valid {
+				subtotalInt32 = int32(item.Subtotal.Int.Int64())
+			}
+			total += subtotalInt32
 		}
 		var createdAtStr string
 		if order.CreatedAt.Valid {
 			createdAtStr = order.CreatedAt.Time.Format("2006-01-02T15:04:05Z07:00")
 		}
-		ordersResponse[i] = OrderResponse{
-			ID:           order.ID,
-			CustomerID:   order.CustomerID,
-			CreatedAt:    createdAtStr,
-			TotalInCents: totalInCents,
-			Items:        items,
+		var customerUUID uuid.UUID
+		if order.CustomerID.Valid {
+			copy(customerUUID[:], order.CustomerID.Bytes[:])
 		}
 		ordersResponse[i] = OrderResponse{
-			ID:           order.ID,
-			CustomerID:   order.CustomerID,
-			CreatedAt:    createdAtStr,
-			TotalInCents: totalInCents,
-			Items:        items,
+			ID:         order.OrderID,
+			CustomerID: customerUUID,
+			CreatedAt:  createdAtStr,
+			Total:      total,
+			Items:      items,
+		}
+		ordersResponse[i] = OrderResponse{
+			ID:         order.OrderID,
+			CustomerID: customerUUID,
+			CreatedAt:  createdAtStr,
+			Total:      total,
+			Items:      items,
 		}
 	}
 	json.WriteJSON(w, http.StatusOK, ordersResponse)
@@ -130,7 +143,7 @@ func (h *handler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	orderItems, err := h.service.GetOrderItemsByOrderID(r.Context(), order.ID)
+	orderItems, err := h.service.GetOrderItemsByOrderID(r.Context(), order.OrderID)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -141,27 +154,35 @@ func (h *handler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
 	if order.CreatedAt.Valid {
 		createdAtStr = order.CreatedAt.Time.Format("2006-01-02T15:04:05Z07:00")
 	}
+	var customerUUID uuid.UUID
+	if order.CustomerID.Valid {
+		copy(customerUUID[:], order.CustomerID.Bytes[:])
+	}
 	response := OrderResponse{
-		ID:         order.ID,
-		CustomerID: order.CustomerID,
+		ID:         order.OrderID,
+		CustomerID: customerUUID,
 		CreatedAt:  createdAtStr,
 	}
 
 	for _, item := range orderItems {
 		response.Items = append(response.Items, struct {
-			ProductID       int64  `json:"productId"`
-			ProductName     string `json:"productName"`
-			Quantity        int32  `json:"quantity"`
-			PriceInCents    int32  `json:"priceInCents"`
-			SubtotalInCents int32  `json:"subtotalInCents"`
+			ProductID   int64          `json:"productId"`
+			ProductName string         `json:"productName"`
+			Quantity    int32          `json:"quantity"`
+			Price       pgtype.Numeric `json:"price"`
+			Subtotal    pgtype.Numeric `json:"subtotal"`
 		}{
-			ProductID:       item.ProductID,
-			ProductName:     item.ProductName,
-			Quantity:        item.Quantity,
-			PriceInCents:    item.PriceInCents,
-			SubtotalInCents: item.SubtotalInCents,
+			ProductID:   item.ProductID,
+			ProductName: item.ProductName,
+			Quantity:    item.Quantity,
+			Price:       item.Price,
+			Subtotal:    item.Subtotal,
 		})
-		response.TotalInCents += item.SubtotalInCents
+		var subtotalInt32 int32
+		if item.Subtotal.Valid {
+			subtotalInt32 = int32(item.Subtotal.Int.Int64())
+		}
+		response.Total += subtotalInt32
 	}
 
 	json.WriteJSON(w, http.StatusOK, response)

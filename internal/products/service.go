@@ -17,11 +17,11 @@ type Service interface {
 
 // svc is the implementation of the Service interface
 type svc struct {
-	repo repo.Queries
+	repo *repo.Queries
 }
 
 // NewService creates a new service for products
-func NewService(repo repo.Queries) Service {
+func NewService(repo *repo.Queries) Service {
 	return &svc{
 		repo: repo,
 	}

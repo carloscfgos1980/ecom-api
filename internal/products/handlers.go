@@ -22,14 +22,26 @@ func NewHandler(s Service) *handler {
 
 // GetProducts handles the GET /products endpoint to retrieve all products
 func (h *handler) GetProducts(w http.ResponseWriter, r *http.Request) {
-	// call the service to get all products and return a 200 OK with the products in the response body
+	// call the service to get all products
 	products, err := h.service.GetProducts(r.Context())
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.WriteJSON(w, http.StatusOK, products)
+	// Convert products to ProductResponse and write JSON response
+	response := make([]ProductResponse, len(products))
+	for i, p := range products {
+		response[i] = ProductResponse{
+			ID:          p.ID,
+			Name:        p.Name,
+			Quantity:    p.Quantity,
+			Price:       p.Price,
+			Description: p.Description,
+		}
+	}
+	// Write the JSON response with a 200 OK status
+	json.WriteJSON(w, http.StatusOK, response)
 
 }
 
@@ -48,5 +60,12 @@ func (h *handler) GetProductByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	json.WriteJSON(w, http.StatusOK, product)
+	response := ProductResponse{
+		ID:          product.ID,
+		Name:        product.Name,
+		Quantity:    product.Quantity,
+		Price:       product.Price,
+		Description: product.Description,
+	}
+	json.WriteJSON(w, http.StatusOK, response)
 }

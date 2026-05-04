@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgtype"
+
 	repo "github.com/carloscfgos1980/ecom-api/internal/database"
 	"github.com/jackc/pgx/v5"
 )
@@ -33,13 +35,6 @@ func NewService(repo *repo.Queries, db *pgx.Conn) Service {
 
 // PlaceOrder creates a new order with the given parameters
 func (s *svc) PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo.Order, error) {
-	// validate the request body and return a 400 Bad Request if it's invalid
-	if tempOrder.CustomerID == 0 {
-		return repo.Order{}, fmt.Errorf("customer ID is required")
-	}
-	if len(tempOrder.Items) == 0 {
-		return repo.Order{}, fmt.Errorf("at least one item is required")
-	}
 	// start a transaction
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -50,7 +45,7 @@ func (s *svc) PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo
 	qtx := s.repo.WithTx(tx)
 
 	// create the order
-	order, err := qtx.CreateOrder(ctx, tempOrder.CustomerID)
+	order, err := qtx.CreateOrder(ctx, pgtype.UUID{Bytes: tempOrder.CustomerID, Valid: true})
 	if err != nil {
 		return repo.Order{}, err
 	}
@@ -68,10 +63,10 @@ func (s *svc) PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo
 
 		// create order item
 		_, err = qtx.CreateOrderItem(ctx, repo.CreateOrderItemParams{
-			OrderID:      order.ID,
-			ProductID:    item.ProductID,
-			Quantity:     item.Quantity,
-			PriceInCents: product.PriceInCents,
+			OrderID:   order.OrderID,
+			ProductID: item.ProductID,
+			Quantity:  item.Quantity,
+			Price:     product.Price,
 		})
 		if err != nil {
 			return repo.Order{}, err
@@ -143,7 +138,7 @@ func (s *svc) GetOrderByID(ctx context.Context, id string) (*repo.Order, error) 
 	tx.Commit(ctx)
 
 	order := &repo.Order{
-		ID:         orderRow.ID,
+		OrderID:    orderRow.OrderID,
 		CustomerID: orderRow.CustomerID,
 		CreatedAt:  orderRow.CreatedAt,
 	}
@@ -151,7 +146,7 @@ func (s *svc) GetOrderByID(ctx context.Context, id string) (*repo.Order, error) 
 	return order, nil
 }
 
-func (s *svc) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]repo.OrderItem, error) {
+func (s *svc) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]repo.GetOrderItemsByOrderIDRow, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -165,16 +160,16 @@ func (s *svc) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]repo
 	}
 	tx.Commit(ctx)
 
-	items := make([]repo.OrderItem, len(itemsRow))
+	items := make([]repo.GetOrderItemsByOrderIDRow, len(itemsRow))
 	for i, row := range itemsRow {
-		items[i] = repo.OrderItem{
-			ID:              row.ID,
-			OrderID:         row.OrderID,
-			ProductName:     row.ProductName,
-			ProductID:       row.ProductID,
-			Quantity:        row.Quantity,
-			PriceInCents:    row.PriceInCents,
-			SubtotalInCents: row.SubtotalInCents,
+		items[i] = repo.GetOrderItemsByOrderIDRow{
+			ID:          row.ID,
+			OrderID:     row.OrderID,
+			ProductID:   row.ProductID,
+			ProductName: row.ProductName,
+			Quantity:    row.Quantity,
+			Price:       row.Price,
+			Subtotal:    row.Subtotal,
 		}
 	}
 

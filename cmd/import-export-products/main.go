@@ -68,14 +68,7 @@ func main() {
 	case "import":
 		// Determine file path for import
 		if strings.TrimSpace(file) == "" {
-			file = env.GetEnv("XLS_FILE_PATH_READ", "")
-			if strings.TrimSpace(file) == "" {
-				file = strings.TrimSpace(dotenvValues["XLS_FILE_PATH_READ"])
-			}
-		}
-		// If file path is still empty, use default
-		if strings.TrimSpace(file) == "" {
-			log.Fatal("missing file path; set -file or XLS_FILE_PATH_READ")
+			file = env.GetEnv("XLS_FILE_PATH_READ", "../../data/products_start.xls")
 		}
 		// Import products from the specified file and sheet
 		if err := importProductsFromFile(ctx, conn, file, sheet); err != nil {
@@ -85,12 +78,15 @@ func main() {
 	case "export":
 		// Determine file path for export
 		if strings.TrimSpace(file) == "" {
-			file = env.GetEnv("XLS_FILE_PATH_WRITE", "")
+			file = env.GetEnv("XLS_FILE_PATH_WRITE", "../../data/products_export.xlsx")
 			if strings.TrimSpace(file) == "" {
 				file = strings.TrimSpace(dotenvValues["XLS_FILE_PATH_WRITE"])
 			}
 		}
 		// export to data folder by default, but allow override via env or flag
+		if strings.TrimSpace(file) == "" {
+			file = "data/products_export.xlsx"
+		}
 		if err := exportProductsToXLSX(ctx, conn, file, sheet); err != nil {
 			log.Fatal(err)
 		}
@@ -202,7 +198,7 @@ func exportProductsToXLSX(ctx context.Context, conn *pgx.Conn, filePath, sheetNa
 	}
 
 	if err := f.SaveAs(filePath); err != nil {
-		return fmt.Errorf("save xls failed: %w", err)
+		return fmt.Errorf("save xlsx failed: %w", err)
 	}
 
 	log.Printf("exported %d products to %s", rowNum-2, filePath)
@@ -468,12 +464,4 @@ func loadDotEnvValues() map[string]string {
 	}
 
 	return values
-}
-
-func fileExists(path string) bool {
-	info, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	return !info.IsDir()
 }

@@ -53,3 +53,31 @@ cd cmd/import-export-products
 go run . -mode import
 go run . -mode export
 ```
+
+Note: When I re run the import I ran into an issue with the relative path so I had to reset the path the root directory since I am running the app from the root directory
+
+## 3. Get products
+
+Note. I had to drop the tables cos the migrations was given a head to change the previos data type
+
+1. queries to get lists of products and a single product
+2. run generate go code from sql (sqlc generate)
+3. Create response struct /internal/products/types.go
+
+4. Set up service /internal/products/service.go
+4.1 svc is the implementation of the Service interface
+4.2 NewService creates a new service for products
+4.3 Service defines the interface for the products service
+
+5. GetProducts method of svc retrieves all products from the database
+6. Add GetProducts method to service interface
+
+7. GetProducts handles the GET /products endpoint to retrieve all products
+7.1 all the service to get all products
+7.2 Convert products to ProductResponse and write JSON response
+7.3 Write the JSON response with a 200 OK status
+
+8. products endpoints
+ productService := products.NewService(repo.New(app.db))
+ productsHandler := products.NewHandler(productService)
+ r.Get("/products", productsHandler.GetProducts)

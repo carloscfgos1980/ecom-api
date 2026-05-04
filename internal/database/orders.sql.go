@@ -14,27 +14,27 @@ import (
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO orders (customer_id)
 VALUES ($1
-) RETURNING id, customer_id, created_at
+) RETURNING order_id, customer_id, created_at
 `
 
-func (q *Queries) CreateOrder(ctx context.Context, customerID int64) (Order, error) {
+func (q *Queries) CreateOrder(ctx context.Context, customerID pgtype.UUID) (Order, error) {
 	row := q.db.QueryRow(ctx, createOrder, customerID)
 	var i Order
-	err := row.Scan(&i.ID, &i.CustomerID, &i.CreatedAt)
+	err := row.Scan(&i.OrderID, &i.CustomerID, &i.CreatedAt)
 	return i, err
 }
 
 const createOrderItem = `-- name: CreateOrderItem :one
-INSERT INTO order_items (order_id, product_id, quantity, price_in_cents)
+INSERT INTO order_items (order_id, product_id, quantity, price)
 VALUES ($1, $2, $3, $4)
-RETURNING id, order_id, product_id, quantity, price_in_cents, subtotal_in_cents
+RETURNING id, order_id, product_id, quantity, price, subtotal
 `
 
 type CreateOrderItemParams struct {
-	OrderID      int64
-	ProductID    int64
-	Quantity     int32
-	PriceInCents int32
+	OrderID   int64
+	ProductID int64
+	Quantity  int32
+	Price     pgtype.Numeric
 }
 
 func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error) {
@@ -42,7 +42,7 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		arg.OrderID,
 		arg.ProductID,
 		arg.Quantity,
-		arg.PriceInCents,
+		arg.Price,
 	)
 	var i OrderItem
 	err := row.Scan(
@@ -50,64 +50,64 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		&i.OrderID,
 		&i.ProductID,
 		&i.Quantity,
-		&i.PriceInCents,
-		&i.SubtotalInCents,
+		&i.Price,
+		&i.Subtotal,
 	)
 	return i, err
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT o.id, o.customer_id, o.created_at, oi.id AS order_item_id, oi.product_id, oi.quantity, oi.price_in_cents, oi.subtotal_in_cents, p.name AS product_name
+SELECT o.order_id, o.customer_id, o.created_at, oi.id AS order_item_id, oi.product_id, oi.quantity, oi.price, oi.subtotal, p.name AS product_name
 FROM orders o
-LEFT JOIN order_items oi ON o.id = oi.order_id
+LEFT JOIN order_items oi ON o.order_id = oi.order_id
 LEFT JOIN products p ON oi.product_id = p.id
-WHERE o.id = $1
+WHERE o.order_id = $1
 `
 
 type GetOrderByIDRow struct {
-	ID              int64
-	CustomerID      int64
-	CreatedAt       pgtype.Timestamptz
-	OrderItemID     pgtype.Int8
-	ProductID       pgtype.Int8
-	Quantity        pgtype.Int4
-	PriceInCents    pgtype.Int4
-	SubtotalInCents pgtype.Int4
-	ProductName     pgtype.Text
+	OrderID     int64
+	CustomerID  pgtype.UUID
+	CreatedAt   pgtype.Timestamptz
+	OrderItemID pgtype.Int8
+	ProductID   pgtype.Int8
+	Quantity    pgtype.Int4
+	Price       pgtype.Numeric
+	Subtotal    pgtype.Numeric
+	ProductName pgtype.Text
 }
 
-func (q *Queries) GetOrderByID(ctx context.Context, id int64) (GetOrderByIDRow, error) {
-	row := q.db.QueryRow(ctx, getOrderByID, id)
+func (q *Queries) GetOrderByID(ctx context.Context, orderID int64) (GetOrderByIDRow, error) {
+	row := q.db.QueryRow(ctx, getOrderByID, orderID)
 	var i GetOrderByIDRow
 	err := row.Scan(
-		&i.ID,
+		&i.OrderID,
 		&i.CustomerID,
 		&i.CreatedAt,
 		&i.OrderItemID,
 		&i.ProductID,
 		&i.Quantity,
-		&i.PriceInCents,
-		&i.SubtotalInCents,
+		&i.Price,
+		&i.Subtotal,
 		&i.ProductName,
 	)
 	return i, err
 }
 
 const getOrderItemsByOrderID = `-- name: GetOrderItemsByOrderID :many
-SELECT oi.id, oi.order_id, oi.product_id, oi.quantity, oi.price_in_cents, oi.subtotal_in_cents, p.name AS product_name 
+SELECT oi.id, oi.order_id, oi.product_id, oi.quantity, oi.price, oi.subtotal, p.name AS product_name 
 FROM order_items oi
 JOIN products p ON oi.product_id = p.id
 WHERE oi.order_id = $1
 `
 
 type GetOrderItemsByOrderIDRow struct {
-	ID              int64
-	OrderID         int64
-	ProductID       int64
-	Quantity        int32
-	PriceInCents    int32
-	SubtotalInCents int32
-	ProductName     string
+	ID          int64
+	OrderID     int64
+	ProductID   int64
+	Quantity    int32
+	Price       pgtype.Numeric
+	Subtotal    pgtype.Numeric
+	ProductName string
 }
 
 func (q *Queries) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]GetOrderItemsByOrderIDRow, error) {
@@ -124,8 +124,8 @@ func (q *Queries) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]
 			&i.OrderID,
 			&i.ProductID,
 			&i.Quantity,
-			&i.PriceInCents,
-			&i.SubtotalInCents,
+			&i.Price,
+			&i.Subtotal,
 			&i.ProductName,
 		); err != nil {
 			return nil, err
@@ -139,7 +139,7 @@ func (q *Queries) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]
 }
 
 const getOrders = `-- name: GetOrders :many
-SELECT id, customer_id, created_at FROM orders
+SELECT order_id, customer_id, created_at FROM orders
 ORDER BY created_at DESC
 `
 
@@ -152,7 +152,7 @@ func (q *Queries) GetOrders(ctx context.Context) ([]Order, error) {
 	var items []Order
 	for rows.Next() {
 		var i Order
-		if err := rows.Scan(&i.ID, &i.CustomerID, &i.CreatedAt); err != nil {
+		if err := rows.Scan(&i.OrderID, &i.CustomerID, &i.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

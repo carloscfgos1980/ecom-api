@@ -5,7 +5,7 @@ VALUES ($1
 
 
 -- name: CreateOrderItem :one
-INSERT INTO order_items (order_id, product_id, quantity, price_in_cents)
+INSERT INTO order_items (order_id, product_id, quantity, price)
 VALUES ($1, $2, $3, $4)
 RETURNING *;
 
@@ -20,11 +20,11 @@ JOIN products p ON oi.product_id = p.id
 WHERE oi.order_id = $1;
 
 -- name: GetOrderByID :one
-SELECT o.*, oi.id AS order_item_id, oi.product_id, oi.quantity, oi.price_in_cents, oi.subtotal_in_cents, p.name AS product_name
+SELECT o.*, oi.id AS order_item_id, oi.product_id, oi.quantity, oi.price, oi.subtotal, p.name AS product_name
 FROM orders o
-LEFT JOIN order_items oi ON o.id = oi.order_id
+LEFT JOIN order_items oi ON o.order_id = oi.order_id
 LEFT JOIN products p ON oi.product_id = p.id
-WHERE o.id = $1;
+WHERE o.order_id = $1;
 
 -- name: UpdateProductStock :exec
 UPDATE products
