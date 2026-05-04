@@ -8,7 +8,7 @@ import (
 	repo "github.com/carloscfgos1980/ecom-api/internal/database"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/carloscfgos1980/ecom-api/internal/orders"
+	"github.com/carloscfgos1980/ecom-api/internal/customers"
 	"github.com/carloscfgos1980/ecom-api/internal/products"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -32,17 +32,26 @@ func (app *application) mount() http.Handler {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("all good for now"))
 	})
+	// customers endpoints
+	// create the customer service and handler
+	customerService := customers.NewService(repo.New(app.db), app.db)
+	customerHandler := customers.NewHandler(customerService, app.config.JWTSecret)
+	// set up the customers routes
+	r.Route("/auth", func(r chi.Router) {
+		r.Post("/register", customerHandler.CreateCustomer)
+		// r.Post("/login", customerHandler.LoginCustomer)
+	})
 	// products endpoints
 	productService := products.NewService(repo.New(app.db))
 	productsHandler := products.NewHandler(productService)
 	r.Get("/products", productsHandler.GetProducts)
 	r.Get("/products/{id}", productsHandler.GetProductByID)
 	// orders endpoints
-	orderService := orders.NewService(repo.New(app.db), app.db)
-	ordersHandler := orders.NewHandler(orderService)
-	r.Post("/orders", ordersHandler.PlaceOrder)
-	r.Get("/orders", ordersHandler.GetOrders)
-	r.Get("/orders/{id}", ordersHandler.GetOrderByID)
+	// orderService := orders.NewService(repo.New(app.db), app.db)
+	// ordersHandler := orders.NewHandler(orderService)
+	// r.Post("/orders", ordersHandler.PlaceOrder)
+	// r.Get("/orders", ordersHandler.GetOrders)
+	// r.Get("/orders/{id}", ordersHandler.GetOrderByID)
 
 	return r
 }
@@ -69,8 +78,9 @@ type application struct {
 
 // config holds the configuration for the application
 type config struct {
-	addr string
-	db   dbConfig
+	addr      string
+	db        dbConfig
+	JWTSecret string
 }
 
 // dbConfig holds the database configuration for the application

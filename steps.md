@@ -17,6 +17,15 @@ goose postgres "postgres://carlosinfante:@localhost:5432/db_ecom?sslmode=disable
 * Chances to the tables price from cents to float
 * Add a description column to the products table
 
+pxg driver for database
+go get "github.com/jackc/pgx/v5"
+
+package to encrypt password
+go get "github.com/alexedwards/argon2id"
+
+package to create jwt
+go get "github.com/golang-jwt/jwt/v5"
+
 ## 2. Read and Write to exel
 
 ### 1. Path to the files
@@ -97,3 +106,71 @@ Note. I had to drop the tables cos the migrations was given a head to change the
 
 6. products endpoints /cmd/api.go
  r.Get("/products/{id}", productsHandler.GetProductByID)
+
+## 5. Register customer
+
+1. Schema for customers (sql/schemas/003_customers.sql)
+1.1 goose postgres "postgres://carlosinfante:@localhost:5432/db_ecom?sslmode=disable" up
+2. Queries add customer, get customer by id and email
+2.1 sqlc generate
+
+3. auxiliar functions for auth
+3.1 HashPassword
+3.2 CheckPasswordHash
+3.3 MakeJWT
+3.4 ValidateJWT
+3.5 GetBearerToken
+3.6 IsStrongPassword
+3.7 IsValidEmail
+Note: I copied the functions from taskSpehre. Just I made an adjustment. Instead of using google uuid, I use ppgtype.UUID which the data type that comes with the driver. This will avoid me later the need to conver customer id
+
+4. Types for auth
+4.1 structs and handler for creating a new user in the system
+4.2 CustomerRequest is the struct for the request body when creating a new customer
+4.3 LoginResponse is the response body when logging in a user.
+
+5. Service set up /internal/customers/types.go
+5.1 Service defines the interface for the customers service
+5.2 svc defines the struct for the customers service
+5.3 NewService creates a new service for the customers package
+
+6. CreateCustomer method of svc creates a new customer in the database
+/internal/customers/service.go
+7. Add CreateCustomer to service interface
+
+8. Handler set up /internal/customers/handler.go
+8.1 handler is the HTTP handler for users endpoints
+8.2 NewHandler creates a new handler for users endpoints
+
+9. CreateCustomer handles the HTTP request for creating a new customer
+9.1 Parse the JSON request body into a CustomerRequest struct
+9.2 Check if any field is empty
+9.3 Validate email format
+9.4 Validate the password strength
+9.5 Hash the password before storing it in the database
+9.6 Update the customer request with the hashed password
+9.7 Call the service to create the customer
+9.8 Check if the error is a unique constraint violation (duplicate email)
+9.9 Create a response struct to send back to the client, excluding the password
+9.10 Write the response as JSON with a 201 Created status code
+
+10. customers endpoints
+10.1 create the customer service and handler
+ customerService := customers.NewService(repo.New(app.db), app.db)
+ customerHandler := customers.NewHandler(customerService, app.config.JWTSecret)
+ // set up the customers routes
+ r.Route("/auth", func(r chi.Router) {
+  r.Post("/register", customerHandler.CreateCustomer)
+ })
+
+11. Add JWT secret
+11.1 Add a field in config struct for jwt secret cmd/api.go
+type config struct {
+ addr      string
+ db        dbConfig
+ JWTSecret string
+}
+11.2 Get the JWT secret from environment variables
+11.3 Load JWT secret to cfg variable
+
+## 6 Login

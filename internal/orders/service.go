@@ -19,7 +19,14 @@ var (
 	ErrProductNoStock  = errors.New("product has not enough stock")
 )
 
-// Service defines the interface for the orders service
+type Service interface {
+	PlaceOrder(ctx context.Context, customerID pgtype.UUID, items []orderItem) (repo.Order, error)
+	GetOrders(ctx context.Context) ([]repo.Order, error)
+	GetOrderByID(ctx context.Context, id string) (*repo.Order, error)
+	GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]repo.GetOrderItemsByOrderIDRow, error)
+}
+
+// svc is the implementation of the Service interface
 type svc struct {
 	repo *repo.Queries
 	db   *pgx.Conn
@@ -34,7 +41,7 @@ func NewService(repo *repo.Queries, db *pgx.Conn) Service {
 }
 
 // PlaceOrder creates a new order with the given parameters
-func (s *svc) PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo.Order, error) {
+func (s *svc) PlaceOrder(ctx context.Context, customerID pgtype.UUID, items []orderItem) (repo.Order, error) {
 	// start a transaction
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -45,13 +52,13 @@ func (s *svc) PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo
 	qtx := s.repo.WithTx(tx)
 
 	// create the order
-	order, err := qtx.CreateOrder(ctx, pgtype.UUID{Bytes: tempOrder.CustomerID, Valid: true})
+	order, err := qtx.CreateOrder(ctx, customerID)
 	if err != nil {
 		return repo.Order{}, err
 	}
 
 	// look for the product if exists
-	for _, item := range tempOrder.Items {
+	for _, item := range items {
 		product, err := qtx.GetProductByID(ctx, item.ProductID)
 		if err != nil {
 			return repo.Order{}, ErrProductNotFound
