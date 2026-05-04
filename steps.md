@@ -60,7 +60,7 @@ Note: When I re run the import I ran into an issue with the relative path so I h
 
 Note. I had to drop the tables cos the migrations was given a head to change the previos data type
 
-1. queries to get lists of products and a single product
+1. queries to get lists of products
 2. run generate go code from sql (sqlc generate)
 3. Create response struct /internal/products/types.go
 
@@ -72,12 +72,28 @@ Note. I had to drop the tables cos the migrations was given a head to change the
 5. GetProducts method of svc retrieves all products from the database
 6. Add GetProducts method to service interface
 
-7. GetProducts handles the GET /products endpoint to retrieve all products
-7.1 all the service to get all products
+7. GetProducts handles the GET /products endpoint to retrieve all products /internal/products/handler.go
+7.1 Call the service to get all products
 7.2 Convert products to ProductResponse and write JSON response
 7.3 Write the JSON response with a 200 OK status
 
-8. products endpoints
+8. products endpoints cmd/api.go
  productService := products.NewService(repo.New(app.db))
  productsHandler := products.NewHandler(productService)
  r.Get("/products", productsHandler.GetProducts)
+
+## 4. Get a product
+
+1. queries to get a single products by id
+2. run generate go code from sql (sqlc generate)
+3. GetProductByID method of svc retrieves a product by its ID from the database /internal/products/service.go
+4. Add GetProductByID to service interface
+
+5. GetProductByID handles the GET /products/{id} endpoint to retrieve a product by its ID
+5.1 get the product id from the URL parameters
+5.2 call the service to get the product by its ID and return a 200 OK with the product in the response body
+5.3 Convert the product to ProductResponse
+5.4 Write the JSON response with a 200 OK status
+
+6. products endpoints /cmd/api.go
+ r.Get("/products/{id}", productsHandler.GetProductByID)

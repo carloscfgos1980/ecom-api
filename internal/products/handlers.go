@@ -60,6 +60,7 @@ func (h *handler) GetProductByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	// Convert the product to ProductResponse
 	response := ProductResponse{
 		ID:          product.ID,
 		Name:        product.Name,
@@ -67,5 +68,6 @@ func (h *handler) GetProductByID(w http.ResponseWriter, r *http.Request) {
 		Price:       product.Price,
 		Description: product.Description,
 	}
+	// Write the JSON response with a 200 OK status
 	json.WriteJSON(w, http.StatusOK, response)
 }
