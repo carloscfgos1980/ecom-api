@@ -173,4 +173,21 @@ type config struct {
 11.2 Get the JWT secret from environment variables
 11.3 Load JWT secret to cfg variable
 
-## 6 Login
+## 7 Login
+
+1. GetCustomerByEmail method of svc gets a customer from the database by email /internal/customers/service.go
+2. Add GetCustomerByEmail to service interface
+
+3. LoginCustomer handles the HTTP request for logging in a customer
+3.1 Parse the JSON request body into a CustomerRequest struct
+3.2 Check if email and password are provided
+3.3 Get the customer by email from the database
+3.4 Check if the provided password matches the stored hashed password
+3.5 Generate a JWT token for the authenticated user
+3.6 Create a response struct to send back to the client with the access token
+3.7 Write the response as JSON with a 200 OK status code
+
+4. Set customer login route /cmd/api.go
+  r.Post("/login", customerHandler.LoginCustomer)
+
+

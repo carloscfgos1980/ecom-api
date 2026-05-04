@@ -10,6 +10,7 @@ import (
 // Service defines the interface for the customers service
 type Service interface {
 	CreateCustomer(ctx context.Context, customer CustomerRequest) (database.Customer, error)
+	GetCustomerByEmail(ctx context.Context, email string) (database.Customer, error)
 }
 
 // svc defines the struct for the customers service
@@ -51,4 +52,28 @@ func (s *svc) CreateCustomer(ctx context.Context, customer CustomerRequest) (dat
 	}
 	// return the created customer
 	return createdCustomer, nil
+}
+
+// GetCustomerByEmail gets a customer from the database by email
+func (s *svc) GetCustomerByEmail(ctx context.Context, email string) (database.Customer, error) {
+	// start a transaction
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return database.Customer{}, err
+	}
+	defer tx.Rollback(ctx)
+	// create a new Queries instance with the transaction
+	qtx := s.repo.WithTx(tx)
+	// get the customer by email
+	customer, err := qtx.GetCustomerByEmail(ctx, email)
+	if err != nil {
+		return database.Customer{}, err
+	}
+	// commit the transaction
+	if err := tx.Commit(ctx); err != nil {
+		return database.Customer{}, err
+	}
+	// return the customer
+	return customer, nil
+
 }

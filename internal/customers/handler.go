@@ -5,13 +5,14 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/carloscfgos1980/ecom-api/internal/json"
 	"github.com/carloscfgos1980/ecom-api/internal/utils"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// handler is the HTTP handler for users endpoints
+// handler is the HTTP handler for customers endpoints
 type handler struct {
 	service   Service
 	jwtSecret string
@@ -90,4 +91,60 @@ func (h *handler) CreateCustomer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+}
+
+// LoginCustomer handles the HTTP request for logging in a customer
+func (h *handler) LoginCustomer(w http.ResponseWriter, r *http.Request) {
+	// Parse the JSON request body into a CustomerRequest struct
+	var customerReq CustomerRequest
+	if err := json.ReadJSON(r, &customerReq); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Check if email and password are provided
+	if customerReq.Email == "" || customerReq.Password == "" {
+		http.Error(w, "Email and password are required", http.StatusBadRequest)
+		return
+	}
+	// Get the customer by email from the database
+	customer, err := h.service.GetCustomerByEmail(r.Context(), customerReq.Email)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+		return
+	}
+	// Check if the provided password matches the stored hashed password
+	match, err := utils.CheckPasswordHash(customerReq.Password, customer.Password)
+	if err != nil || !match {
+		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+		return
+	}
+	// Generate a JWT token for the authenticated user
+	token, err := utils.MakeJWT(
+		customer.ID,
+		h.jwtSecret,
+		24*7*time.Hour,
+	)
+	if err != nil {
+		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		return
+	}
+
+	// Create a response struct to send back to the client with the access token
+	response := LoginResponse{
+		Customer: Customer{
+			ID:        customer.ID,
+			CreatedAt: customer.CreatedAt.Time,
+			UpdatedAt: customer.UpdatedAt.Time,
+			Email:     customer.Email,
+		},
+		Token: token,
+	}
+	// Write the response as JSON with a 200 OK status code
+	if err := json.WriteJSON(w, http.StatusOK, response); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

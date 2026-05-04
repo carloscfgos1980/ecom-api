@@ -39,7 +39,7 @@ func (app *application) mount() http.Handler {
 	// set up the customers routes
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", customerHandler.CreateCustomer)
-		// r.Post("/login", customerHandler.LoginCustomer)
+		r.Post("/login", customerHandler.LoginCustomer)
 	})
 	// products endpoints
 	productService := products.NewService(repo.New(app.db))
