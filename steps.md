@@ -173,7 +173,7 @@ type config struct {
 11.2 Get the JWT secret from environment variables
 11.3 Load JWT secret to cfg variable
 
-## 7 Login
+## 7 Login customer
 
 1. GetCustomerByEmail method of svc gets a customer from the database by email /internal/customers/service.go
 2. Add GetCustomerByEmail to service interface
@@ -190,4 +190,75 @@ type config struct {
 4. Set customer login route /cmd/api.go
   r.Post("/login", customerHandler.LoginCustomer)
 
+## 8. Middleware
 
+1. HTTP middleware setting a value on the request context /internal/authmiddleware/auth_middleware.go
+1.1 Return a new http.HandlerFunc that wraps the original handler and adds the authentication logic
+1.2 Extract the token from the Authorization header
+1.3 Validate the token and extract the customer ID
+1.4 Create a new context with the customer ID value
+1.5 Call the next handler with the new context
+
+2. protected routes
+ r.Route("/api", func(r chi.Router) {
+  // Add authentication middleware here if available
+  r.Use(func(next http.Handler) http.Handler {
+   return authmiddleware.AuthMiddleware(next, app.config.JWTSecret)
+  })
+  ....
+ })
+
+## 9. Place orders
+
+1. types /internal,orders,types.go
+1.1 orderItem represents an item in an order
+1.2 OrderResponse represents the response for an order
+
+2. Service set up
+2.1 errors that can be returned by the service
+2.2 Service defines the interface for the orders service
+2.3 svc is the implementation of the Service interface
+2.4 NewService creates a new service for orders
+
+3. GetCustomerByID method of svc returns a customer by its ID
+
+4. PlaceOrder creates a new order with the given parameters
+4.1 start a transaction
+4.2 create a new Queries instance with the transaction
+4.3 create the order
+4.4 look for the product if exists
+4.5 get the product by its ID
+4.6 check if the product has enough stock
+4.7 create order item
+4.8 update product stock
+4.9 commit the transaction
+4.10 return the created order
+
+5. Add GetCustomerByID and PlaceOrder to service interface
+
+6. Handler set up
+6.1 handler is the HTTP handler for orders endpoints
+6.2 NewHandler creates a new handler for orders endpoints
+
+7. PlaceOrder handles the POST /orders endpoint to create a new order
+7.1 get the customer ID from the context
+7.2 heck if the customer is registered in the database
+7.3 read the request body and unmarshal it into a slice of orderItems
+7.4 validate the request body and return a 400 Bad Request if it's invalid
+7.5 call the service to place the order and return a 201 Created with the created order in the response body
+7.6 return the created order in the response body
+
+8. orders endpoints inside the protected route
+ // protected routes
+ r.Route("/api", func(r chi.Router) {
+  // Add authentication middleware here if available
+  r.Use(func(next http.Handler) http.Handler {
+   return authmiddleware.AuthMiddleware(next, app.config.JWTSecret)
+  })
+  // orders endpoints
+  orderService := orders.NewService(repo.New(app.db), app.db)
+  ordersHandler := orders.NewHandler(orderService)
+  r.Post("/orders", ordersHandler.PlaceOrder)
+  // r.Get("/orders", ordersHandler.GetOrders)
+  // r.Get("/orders/{id}", ordersHandler.GetOrderByID)
+ })

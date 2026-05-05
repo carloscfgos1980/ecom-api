@@ -1,6 +1,7 @@
 -- name: GetProducts :many
 SELECT *
-FROM products;
+FROM products
+ORDER BY id ASC;
 
 -- name: GetProductByID :one
 SELECT *

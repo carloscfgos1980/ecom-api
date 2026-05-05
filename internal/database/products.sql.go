@@ -33,6 +33,7 @@ func (q *Queries) GetProductByID(ctx context.Context, id int64) (Product, error)
 const getProducts = `-- name: GetProducts :many
 SELECT id, name, price, quantity, description, created_at, updated_at
 FROM products
+ORDER BY id ASC
 `
 
 func (q *Queries) GetProducts(ctx context.Context) ([]Product, error) {

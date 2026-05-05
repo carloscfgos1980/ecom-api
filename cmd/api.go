@@ -8,7 +8,9 @@ import (
 	repo "github.com/carloscfgos1980/ecom-api/internal/database"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/carloscfgos1980/ecom-api/internal/authmiddleware"
 	"github.com/carloscfgos1980/ecom-api/internal/customers"
+	"github.com/carloscfgos1980/ecom-api/internal/orders"
 	"github.com/carloscfgos1980/ecom-api/internal/products"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -46,13 +48,20 @@ func (app *application) mount() http.Handler {
 	productsHandler := products.NewHandler(productService)
 	r.Get("/products", productsHandler.GetProducts)
 	r.Get("/products/{id}", productsHandler.GetProductByID)
-	// orders endpoints
-	// orderService := orders.NewService(repo.New(app.db), app.db)
-	// ordersHandler := orders.NewHandler(orderService)
-	// r.Post("/orders", ordersHandler.PlaceOrder)
-	// r.Get("/orders", ordersHandler.GetOrders)
-	// r.Get("/orders/{id}", ordersHandler.GetOrderByID)
 
+	// protected routes
+	r.Route("/api", func(r chi.Router) {
+		// Add authentication middleware here if available
+		r.Use(func(next http.Handler) http.Handler {
+			return authmiddleware.AuthMiddleware(next, app.config.JWTSecret)
+		})
+		// orders endpoints
+		orderService := orders.NewService(repo.New(app.db), app.db)
+		ordersHandler := orders.NewHandler(orderService)
+		r.Post("/orders", ordersHandler.PlaceOrder)
+		// r.Get("/orders", ordersHandler.GetOrders)
+		// r.Get("/orders/{id}", ordersHandler.GetOrderByID)
+	})
 	return r
 }
 

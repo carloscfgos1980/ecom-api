@@ -6,16 +6,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// orderItem represents an item in an order
 type orderItem struct {
 	ProductID int64 `json:"productId"`
 	Quantity  int32 `json:"quantity"`
 }
 
-type createOrderParams struct {
-	CustomerID pgtype.UUID `json:"customerId"`
-	Items      []orderItem `json:"items"`
-}
-
+// OrderResponse represents the response for an order
 type OrderResponse struct {
 	ID         int64                      `json:"id"`
 	CustomerID pgtype.UUID                `json:"customerId"`

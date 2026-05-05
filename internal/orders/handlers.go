@@ -1,12 +1,12 @@
 package orders
 
-// "fmt"
+import (
+	"log"
+	"net/http"
 
-// "github.com/google/uuid"
-
-// "github.com/jackc/pgx/v5/pgtype"
-
-// "github.com/go-chi/chi/v5"
+	"github.com/carloscfgos1980/ecom-api/internal/json"
+	"github.com/jackc/pgx/v5/pgtype"
+)
 
 // handler is the HTTP handler for orders endpoints
 type handler struct {
@@ -21,39 +21,47 @@ func NewHandler(service Service) *handler {
 }
 
 // PlaceOrder handles the POST /orders endpoint to create a new order
-// func (h *handler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
-// 	userID := r.Context().Value("userID")
-// 	if userID == nil {
-// 		log.Println("userID not found in context")
-// 		http.Error(w, "userID not found in context", http.StatusInternalServerError)
-// 		return
-// 	}
-// 	// read the request body and unmarshal it into a createOrderParams struct
-// 	var tempOrder createOrderParams
-// 	// validate the request body and return a 400 Bad Request if it's invalid
-// 	if err := json.ReadJSON(r, &tempOrder); err != nil {
-// 		log.Println(err)
-// 		http.Error(w, err.Error(), http.StatusBadRequest)
-// 		return
-// 	}
-// 	// call the service to place the order and return a 201 Created with the created order in the response body
-// 	createdOrder, err := h.service.PlaceOrder(r.Context(), userID.(pgtype.UUID), tempOrder.Items)
-// 	if err != nil {
-// 		log.Println(err)
-// 		if err == ErrProductNotFound {
-// 			http.Error(w, err.Error(), http.StatusNotFound)
-// 			return
-// 		}
-// 		if err == ErrProductNoStock {
-// 			http.Error(w, err.Error(), http.StatusConflict)
-// 			return
-// 		}
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-// 	// return the created order in the response body
-// 	json.WriteJSON(w, http.StatusCreated, createdOrder)
-// }
+func (h *handler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
+	// get the customer ID from the context
+	customerID := r.Context().Value("customerID")
+	if customerID == nil {
+		log.Println("customerID not found in context")
+		http.Error(w, "customerID not found in context", http.StatusInternalServerError)
+		return
+	}
+	//check if the customer is registered in the database
+	_, err := h.service.GetCustomerByID(r.Context(), customerID.(pgtype.UUID))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "you must be a registered customer to place an order", http.StatusNotFound)
+		return
+	}
+	// read the request body and unmarshal it into a slice of orderItems
+	var items []orderItem
+	// validate the request body and return a 400 Bad Request if it's invalid
+	if err := json.ReadJSON(r, &items); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// call the service to place the order and return a 201 Created with the created order in the response body
+	createdOrder, err := h.service.PlaceOrder(r.Context(), customerID.(pgtype.UUID), items)
+	if err != nil {
+		log.Println(err)
+		if err == ErrProductNotFound {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		if err == ErrProductNoStock {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// return the created order in the response body
+	json.WriteJSON(w, http.StatusCreated, createdOrder)
+}
 
 // func (h *handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 // 	orders, err := h.service.GetOrders(r.Context())

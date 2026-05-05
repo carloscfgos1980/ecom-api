@@ -16,11 +16,13 @@ import (
 // errors that can be returned by the service
 var (
 	ErrProductNotFound = errors.New("product not found")
-	ErrProductNoStock  = errors.New("product has not enough stock")
+	ErrProductNoStock  = errors.New("product has not enough in stock")
 )
 
+// Service defines the interface for the orders service
 type Service interface {
 	PlaceOrder(ctx context.Context, customerID pgtype.UUID, items []orderItem) (repo.Order, error)
+	GetCustomerByID(ctx context.Context, id pgtype.UUID) (repo.Customer, error)
 	GetOrders(ctx context.Context) ([]repo.Order, error)
 	GetOrderByID(ctx context.Context, id string) (*repo.Order, error)
 	GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]repo.GetOrderItemsByOrderIDRow, error)
@@ -38,6 +40,27 @@ func NewService(repo *repo.Queries, db *pgx.Conn) Service {
 		repo: repo,
 		db:   db,
 	}
+}
+
+// GetCustomerByID returns a customer by its ID
+func (s *svc) GetCustomerByID(ctx context.Context, id pgtype.UUID) (repo.Customer, error) {
+	// start a transaction
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return repo.Customer{}, err
+	}
+	defer tx.Rollback(ctx)
+	// create a new Queries instance with the transaction
+	qtx := s.repo.WithTx(tx)
+	customer, err := qtx.GetCustomerByID(ctx, id)
+	if err != nil {
+		return repo.Customer{}, err
+	}
+	// commit the transaction
+	if err := tx.Commit(ctx); err != nil {
+		return repo.Customer{}, err
+	}
+	return customer, nil
 }
 
 // PlaceOrder creates a new order with the given parameters
@@ -59,11 +82,12 @@ func (s *svc) PlaceOrder(ctx context.Context, customerID pgtype.UUID, items []or
 
 	// look for the product if exists
 	for _, item := range items {
+		// get the product by its ID
 		product, err := qtx.GetProductByID(ctx, item.ProductID)
 		if err != nil {
 			return repo.Order{}, ErrProductNotFound
 		}
-
+		// check if the product has enough stock
 		if product.Quantity < item.Quantity {
 			return repo.Order{}, ErrProductNoStock
 		}
@@ -89,9 +113,9 @@ func (s *svc) PlaceOrder(ctx context.Context, customerID pgtype.UUID, items []or
 			return repo.Order{}, err
 		}
 	}
-
+	// commit the transaction
 	tx.Commit(ctx)
-
+	// return the created order
 	return order, nil
 }
 
