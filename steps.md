@@ -259,6 +259,33 @@ type config struct {
   orderService := orders.NewService(repo.New(app.db), app.db)
   ordersHandler := orders.NewHandler(orderService)
   r.Post("/orders", ordersHandler.PlaceOrder)
-  // r.Get("/orders", ordersHandler.GetOrders)
-  // r.Get("/orders/{id}", ordersHandler.GetOrderByID)
  })
+
+## 10. Get orders with auth
+
+1. GetOrders method of svc returns all orders /internal/orders/service.go
+2. GetOrderByID returns an order by its ID
+3. GetOrderItemsByOrderID returns the items of an order by the order ID
+4. Add GetOrders, GetOrderByID and GetOrderItemsByOrderID to service interface
+
+5. FormatTimestamp, FormatTotal and FormatNumeric helper functios in /internal/utils.utils.go
+
+6. GetOrders handles the GET /orders endpoint to get all orders for the authenticated customer /internal/orders/handler.go
+6.1 get the customer ID from the context
+6.2 check if the customer is registered in the database
+6.3 call the service to get the orders
+6.4 format the response with total as decimal with 2 places
+6.5 map orders to response
+6.6 get order by id
+6.7 get items for each order
+6.8 calculate total from items
+6.9 map order items to response
+6.10 add subtotal to total
+6.11 map order to response
+6.12 return the orders in the response body
+
+7. protected routes. orders endpoints
+/cmd/api.go
+  r.Get("/orders", ordersHandler.GetOrders)
+
+Note: The subtotuol and total data type is a string. I use a helper function from utils to convert pgtype.Numeric to string

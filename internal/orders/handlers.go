@@ -1,10 +1,13 @@
 package orders
 
 import (
+	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 
 	"github.com/carloscfgos1980/ecom-api/internal/json"
+	"github.com/carloscfgos1980/ecom-api/internal/utils"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -59,86 +62,115 @@ func (h *handler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// format the response with total as decimal with 2 places
+	orderItems, err := h.service.GetOrderItemsByOrderID(r.Context(), createdOrder.OrderID)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// calculate total from items
+	var total pgtype.Numeric
+	total.Valid = true
+	total.Int = new(big.Int)
+	for _, item := range orderItems {
+		if item.Subtotal.Valid {
+			total.Int.Add(total.Int, item.Subtotal.Int)
+		}
+	}
+	response := OrderResponse{
+		ID:         createdOrder.OrderID,
+		CustomerID: createdOrder.CustomerID,
+		CreatedAt:  utils.FormatTimestamp(createdOrder.CreatedAt),
+		Total:      utils.FormatTotal(total),
+		Items:      make([]itemsResponse, len(orderItems)),
+	}
+	// map order items to response
+	for i, item := range orderItems {
+		response.Items[i] = itemsResponse{
+			ProductID:   item.ProductID,
+			ProductName: item.ProductName,
+			Quantity:    item.Quantity,
+			Price:       utils.FormatNumeric(item.Price),
+			Subtotal:    utils.FormatNumeric(item.Subtotal),
+		}
+	}
 	// return the created order in the response body
-	json.WriteJSON(w, http.StatusCreated, createdOrder)
+	json.WriteJSON(w, http.StatusCreated, response)
 }
 
-// func (h *handler) GetOrders(w http.ResponseWriter, r *http.Request) {
-// 	orders, err := h.service.GetOrders(r.Context())
-// 	if err != nil {
-// 		log.Println(err)
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-// 	ordersResponse := make([]OrderResponse, len(orders))
-// 	for i, order := range orders {
-// 		order, err := h.service.GetOrderByID(r.Context(), fmt.Sprintf("%d", order.OrderID))
-// 		if err != nil {
-// 			log.Println(err)
-// 			http.Error(w, err.Error(), http.StatusInternalServerError)
-// 			return
-// 		}
-// 		orderItems, err := h.service.GetOrderItemsByOrderID(r.Context(), order.OrderID)
-// 		if err != nil {
-// 			log.Println(err)
-// 			http.Error(w, err.Error(), http.StatusInternalServerError)
-// 			return
-// 		}
-
-// 		items := make([]struct {
-// 			ProductID   int64          `json:"productId"`
-// 			ProductName string         `json:"productName"`
-// 			Quantity    int32          `json:"quantity"`
-// 			Price       pgtype.Numeric `json:"price"`
-// 			Subtotal    pgtype.Numeric `json:"subtotal"`
-// 		}, len(orderItems))
-// 		var total int32
-// 		for j, item := range orderItems {
-// 			items[j] = struct {
-// 				ProductID   int64          `json:"productId"`
-// 				ProductName string         `json:"productName"`
-// 				Quantity    int32          `json:"quantity"`
-// 				Price       pgtype.Numeric `json:"price"`
-// 				Subtotal    pgtype.Numeric `json:"subtotal"`
-// 			}{
-// 				ProductID:   item.ProductID,
-// 				ProductName: item.ProductName,
-// 				Quantity:    item.Quantity,
-// 				Price:       item.Price,
-// 				Subtotal:    item.Subtotal,
-// 			}
-// 			// Convert subtotal to int32 and add to total
-// 			var subtotalInt32 int32
-// 			if item.Subtotal.Valid {
-// 				subtotalInt32 = int32(item.Subtotal.Int.Int64())
-// 			}
-// 			total += subtotalInt32
-// 		}
-// 		var createdAtStr string
-// 		if order.CreatedAt.Valid {
-// 			createdAtStr = order.CreatedAt.Time.Format("2006-01-02T15:04:05Z07:00")
-// 		}
-// 		var customerUUID uuid.UUID
-// 		if order.CustomerID.Valid {
-// 			copy(customerUUID[:], order.CustomerID.Bytes[:])
-// 		}
-// 		ordersResponse[i] = OrderResponse{
-// 			ID:         order.OrderID,
-// 			CustomerID: customerUUID,
-// 			CreatedAt:  createdAtStr,
-// 			Total:      total,
-// 			Items:      items,
-// 		}
-// 		ordersResponse[i] = OrderResponse{
-// 			ID:         order.OrderID,
-// 			CustomerID: customerUUID,
-// 			CreatedAt:  createdAtStr,
-// 			Total:      total,
-// 			Items:      items,
-// 		}
-// 	}
-// 	json.WriteJSON(w, http.StatusOK, ordersResponse)
-// }
+// GetOrders handles the GET /orders endpoint to get all orders for the authenticated customer
+func (h *handler) GetOrders(w http.ResponseWriter, r *http.Request) {
+	// get the customer ID from the context
+	customerID := r.Context().Value("customerID")
+	if customerID == nil {
+		log.Println("customerID not found in context")
+		http.Error(w, "customerID not found in context", http.StatusInternalServerError)
+		return
+	}
+	//check if the customer is registered in the database
+	_, err := h.service.GetCustomerByID(r.Context(), customerID.(pgtype.UUID))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "you must be a registered customer to place an order", http.StatusNotFound)
+		return
+	}
+	// call the service to get the orders
+	orders, err := h.service.GetOrders(r.Context())
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// format the response with total as decimal with 2 places
+	ordersResponse := make([]OrderResponse, len(orders))
+	// map orders to response
+	for i, order := range orders {
+		// get order items for each order
+		order, err := h.service.GetOrderByID(r.Context(), fmt.Sprintf("%d", order.OrderID))
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// get order items for each order
+		orderItems, err := h.service.GetOrderItemsByOrderID(r.Context(), order.OrderID)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// calculate total from items
+		var total pgtype.Numeric
+		total.Valid = true
+		total.Int = new(big.Int)
+		// map order items to response
+		var items []itemsResponse = make([]itemsResponse, len(orderItems))
+		for j, item := range orderItems {
+			items[j] = itemsResponse{
+				ProductID:   item.ProductID,
+				ProductName: item.ProductName,
+				Quantity:    item.Quantity,
+				Price:       utils.FormatNumeric(item.Price),
+				Subtotal:    utils.FormatNumeric(item.Subtotal),
+			}
+			// add subtotal to total
+			if item.Subtotal.Valid {
+				total.Int.Add(total.Int, item.Subtotal.Int)
+			}
+		}
+		// map order to response
+		ordersResponse[i] = OrderResponse{
+			ID:         order.OrderID,
+			CustomerID: order.CustomerID,
+			CreatedAt:  utils.FormatTimestamp(order.CreatedAt),
+			Total:      utils.FormatTotal(total),
+			Items:      items,
+		}
+	}
+	// return the orders in the response body
+	json.WriteJSON(w, http.StatusOK, ordersResponse)
+}
 
 // func (h *handler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
 // 	id := chi.URLParam(r, "id")

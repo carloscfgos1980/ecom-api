@@ -177,6 +177,7 @@ func (s *svc) GetOrderByID(ctx context.Context, id string) (*repo.Order, error) 
 	return order, nil
 }
 
+// GetOrderItemsByOrderID returns the items of an order by the order ID
 func (s *svc) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]repo.GetOrderItemsByOrderIDRow, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {

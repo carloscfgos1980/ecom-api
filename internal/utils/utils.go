@@ -161,3 +161,32 @@ func IsValidEmail(email string) error {
 
 	return nil
 }
+
+// FormatTimestamp converts pgtype.Timestamptz to ISO 8601 string format
+func FormatTimestamp(ts pgtype.Timestamptz) string {
+	if ts.Valid {
+		return ts.Time.Format("2006-01-02T15:04:05Z07:00")
+	}
+	return ""
+}
+
+// FormatTotal converts pgtype.Numeric to string with 2 decimal places
+func FormatTotal(total pgtype.Numeric) string {
+	if !total.Valid {
+		return "0.00"
+	}
+	// Numeric stores values as a big.Int with exponent, convert to decimal string
+	// The value is stored in cents, so divide by 100
+	num := total.Int.Int64()
+	return fmt.Sprintf("%.2f", float64(num)/100.0)
+}
+
+// formatNumeric converts pgtype.Numeric to string with 2 decimal places
+func FormatNumeric(num pgtype.Numeric) string {
+	if !num.Valid {
+		return "0.00"
+	}
+	// Convert big.Int to int64 and then to float with 2 decimal places
+	value := num.Int.Int64()
+	return fmt.Sprintf("%.2f", float64(value)/100.0)
+}
