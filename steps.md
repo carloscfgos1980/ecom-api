@@ -289,3 +289,21 @@ type config struct {
   r.Get("/orders", ordersHandler.GetOrders)
 
 Note: The subtotuol and total data type is a string. I use a helper function from utils to convert pgtype.Numeric to string
+
+## 11. Get order by id
+
+1. GetOrderByID handles the GET /orders/{id} endpoint to get an order by ID for the authenticated customer /internal/orders/handler.go
+1.1 get the customer ID from the context
+1.2 check if the customer is registered in the database
+1.3 get the order ID from the URL parameter
+1.4 call the service to get the order by ID
+1.5 get order items for the order
+1.6 calculate total from items
+1.7 map order items to response
+1.8 add subtotal to total
+1.9 map order to response
+1.10 return the order in the response body
+
+2. protected routes. orders endpoints
+/cmd/api.go
+ r.Get("/products/{id}", productsHandler.GetProductByID)

@@ -60,7 +60,7 @@ func (app *application) mount() http.Handler {
 		ordersHandler := orders.NewHandler(orderService)
 		r.Post("/orders", ordersHandler.PlaceOrder)
 		r.Get("/orders", ordersHandler.GetOrders)
-		// r.Get("/orders/{id}", ordersHandler.GetOrderByID)
+		r.Get("/orders/{id}", ordersHandler.GetOrderByID)
 	})
 	return r
 }
