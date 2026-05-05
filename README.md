@@ -4,17 +4,25 @@
 
 RestFul API with 2 endpoints:
 
+* customers
 * products
 * orders
 
 ## Main features
+
+### Read and Write (excel document)
+
+### auth
+
+* Register
+* Login
 
 ### products
 
 * Get all products
 * Get a single product by id
 
-### orders
+### orders with auth. Just authentication. No authorization implemented
 
 * Place an order
 * Get all the orders
@@ -22,7 +30,7 @@ RestFul API with 2 endpoints:
 
 ### Data persisted
 
-* Postgres 16 using a Docker image
+* Postgres
 * Migrations are running with **goose** using **pgx** package
 
 ### routes
@@ -34,7 +42,7 @@ RestFul API with 2 endpoints:
 Inside a Go module:
 
 ```bash
-go get github.com/carloscfgos1980/ecom-api
+go get -b version2 github.com/carloscfgos1980/ecom-api
 ```
 
 ## 🚀 Quick Start Consumer
@@ -45,20 +53,36 @@ go run cmd/*.go
 
 ## 📖 Usage
 
+### Read and write (excel)
+
+```bash
+go run cmd/import-export-products/main.go -file=path/to/products.xlsx -sheet=Sheet1 -mode=import
+go run cmd/import-export-products/main.go -file=path/to/products.xlsx -sheet=Sheet1 -mode=export
+```
+
+Note: I ran into issues with the path. The problem was that sometimes I ran the command from the root directory and passing the path and sometimes I did it from the directory where the main.go file host the logic to read and write (cmd/import-export-products/main.go). Solution is to pick a single way to do it. I recommend to run it from the root directory and to have a related path in the .env file
+
+```bash
+go run cmd/import-export-products/main.go -mode=import
+go run cmd/import-export-products/main.go -mode=export
+```
+
 ### programs needed to run the api
 
-1. postgres (Docker image)
-2. goose (migrations)
-3. SQLC (generate Go code from SQL queries)
-4. pgx (package to connect to databse)
-5. chi (package tp build the routes)
+
+1. goose (migrations)
+2. SQLC (generate Go code from SQL queries)
+3. pgx (package to connect to databse)
+4. chi (package tp build the routes)
+5. Argon2id (encrypt password)
+6. golang-jwt (create JWT token)
 
 ## 🤝 Contributing
 
 ### Clone the repo
 
 ```bash
-git clone github.com/carloscfgos1980/ecom-api
+git clone -b version2 github.com/carloscfgos1980/ecom-api
 cd ecom-api
 ```
 

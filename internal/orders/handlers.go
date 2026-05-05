@@ -174,6 +174,7 @@ func (h *handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	json.WriteJSON(w, http.StatusOK, ordersResponse)
 }
 
+// GetOrderByID handles the GET /orders/{id} endpoint to get an order by ID for the authenticated customer
 func (h *handler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
 	// get the customer ID from the context
 	customerID := r.Context().Value("customerID")
@@ -228,6 +229,7 @@ func (h *handler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
 			total.Int.Add(total.Int, item.Subtotal.Int)
 		}
 	}
+	// map order to response
 	response := OrderResponse{
 		ID:         order.OrderID,
 		CustomerID: order.CustomerID,
@@ -236,6 +238,5 @@ func (h *handler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
 		Items:      items,
 	}
 	// return the order in the response body
-
 	json.WriteJSON(w, http.StatusOK, response)
 }
