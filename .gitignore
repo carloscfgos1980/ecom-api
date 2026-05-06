@@ -1,0 +1,9 @@
+.env
+tmp/
+cmd/tmp/
+logs/
+cmd/logs/
+*.log
+*.tmp
+*.env
+cmd/*.env
