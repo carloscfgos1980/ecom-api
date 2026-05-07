@@ -18,10 +18,12 @@ var (
 
 // Config struct to hold application configuration values
 type Config struct {
-	DB        *database.Queries
-	DB_URL    string
-	Port      string
-	JWTSecret string
+	DB                  *database.Queries
+	DB_URL              string
+	Port                string
+	JWTSecret           string
+	XLS_FILE_PATH_READ  string
+	XLS_FILE_PATH_WRITE string
 }
 
 // LoadConfig loads configuration values from environment variables and returns a Config struct
@@ -48,10 +50,21 @@ func LoadConfig() (*Config, error) {
 		return nil, ErrMissingJWT
 	}
 
+	XLS_FILE_PATH_READ := os.Getenv("XLS_FILE_PATH_READ")
+	if XLS_FILE_PATH_READ == "" {
+		XLS_FILE_PATH_READ = "data-exel/products_start.xls"
+	}
+
+	XLS_FILE_PATH_WRITE := os.Getenv("XLS_FILE_PATH_WRITE")
+	if XLS_FILE_PATH_WRITE == "" {
+		XLS_FILE_PATH_WRITE = "data-exel/products_export.xlsx"
+	}
 	// Return the configuration struct with the loaded values
 	return &Config{
-		DB_URL:    DB_URL,
-		Port:      Port,
-		JWTSecret: JWTSecret,
+		DB_URL:              DB_URL,
+		Port:                Port,
+		JWTSecret:           JWTSecret,
+		XLS_FILE_PATH_READ:  XLS_FILE_PATH_READ,
+		XLS_FILE_PATH_WRITE: XLS_FILE_PATH_WRITE,
 	}, nil
 }

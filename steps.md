@@ -38,3 +38,27 @@ go get github.com/google/uuid
 5. Set trusted proxies to nil to avoid warnings in Gin 1.7+
 6. Define a simple health check route
 7. Start the server on the specified port
+
+### 3. Make first commit to github
+
+```bash
+git init
+git add .
+git commit -m "first commit"
+git remote add origin https://github.com/carloscfgos1980/ecom-api.git
+git checkout -b gin_framework
+git push orgin gin_framework
+```
+
+## 3. Write and Read (excel)
+
+Note: I just as Copilot how to do it and make a few adjustments:
+
+1. database will be reset everytime we add new products
+2. products id will match the id from xls file
+3. add flags to pass arguments from the CLI
+
+```bash
+go run cmd/seed/main.go -mode import
+go run cmd/seed/main.go -mode export
+```
