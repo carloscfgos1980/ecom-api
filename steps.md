@@ -126,3 +126,15 @@ go run cmd/seed/main.go -mode export
 1.5 Send the product back to the client with a 200 OK status
 2. Product routes
  router.GET("/products/:id", handlers.GetProductByIDHandler(cfg))
+
+## 7. Auth Middleware
+
+1. AuthMiddleware is a Gin middleware function that validates JWT tokens in incoming requests to protect routes that require authentication. It checks for the presence of a valid JWT token in the Authorization header of the request, verifies the token using the secret key from the configuration, and sets the user ID in the Gin context for use in subsequent handlers if the token is valid. If the token is missing or invalid, it returns a 401 Unauthorized response and aborts further processing of the request.
+1.1 Return a handler function that can be used in the Gin router as middleware for routes that require authentication.
+1.2 If there is an error extracting the token (e.g., missing or malformed header), return a 401 Unauthorized response with an appropriate error message and abort the request processing.
+1.3 Validate the extracted token using the secret key from the configuration. If the token is invalid (e.g., expired, malformed, or signature mismatch), return a 401 Unauthorized response with an appropriate error message and abort the request processing.
+1.4 If the token is valid, set the customer ID in the Gin context (e.g., using c.Set("customerID", customerID)) for use in subsequent handlers that require authentication.
+
+2. Register order-related routes with authentication middleware
+ ordersGroup := router.Group("/orders")
+ ordersGroup.Use(middleware.AuthMiddleware(cfg))
