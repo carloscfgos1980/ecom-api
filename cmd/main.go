@@ -8,6 +8,7 @@ import (
 
 	"github.com/carloscfgos1980/ecom-api/internal/config"
 	"github.com/carloscfgos1980/ecom-api/internal/database"
+	"github.com/carloscfgos1980/ecom-api/internal/handlers"
 
 	_ "github.com/lib/pq"
 )
@@ -40,11 +41,14 @@ func main() {
 	// Define a simple health check route
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"message":  "Todo API is running",
+			"message":  "Ecom API is running",
 			"status":   "success",
 			"database": "connected",
 		})
 	})
+	// Register customer-related routes
+	router.POST("/auth/register", handlers.CreateCustomerHandler(cfg))
+
 	// Start the server on the specified port
 	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Error starting server: %v", err)

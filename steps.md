@@ -17,6 +17,12 @@ go get github.com/joho/godotenv
 * install package for google uuid
 go get github.com/google/uuid
 
+* install argon to hash password
+go get github.com/alexedwards/argon2id
+
+* install JWT package
+"github.com/golang-jwt/jwt/v5"
+
 ## 2. Set up
 
 ### 1. Config /internal/config/config.go
@@ -62,3 +68,21 @@ Note: I just as Copilot how to do it and make a few adjustments:
 go run cmd/seed/main.go -mode import
 go run cmd/seed/main.go -mode export
 ```
+
+## Register customer
+
+1. types to handle customer request and response internal/handlers/customer_habdler.go
+1.1 structs and handler for creating a new customer in the system
+1.2 CustomerRequest is the struct for the request body when creating a new customer
+
+2. CreateCustomerHandler is the handler for creating a new customer internal/handlers/customer_habdler.go
+2.1 Bind the JSON request body to the CustomerRequest struct and validate it
+2.2 Validate email format
+2.3 Validate the password strength
+2.4 Hash the password before storing it in the database
+2.5 Create the customer in the database using the provided configuration and request data
+2.6 Prepare the response with the created customer's information, excluding the password
+2.7 Return the created customer information in the response with a 201 Created status
+
+3. Register customer-related routes cmd/main.go
+ router.POST("/auth/register", handlers.CreateCustomerHandler(cfg))
