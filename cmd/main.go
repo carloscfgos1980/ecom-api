@@ -52,6 +52,7 @@ func main() {
 
 	// Product routes
 	router.GET("/products", handlers.GetProductsHandler(cfg))
+	router.GET("/products/:id", handlers.GetProductByIDHandler(cfg))
 
 	// Start the server on the specified port
 	if err := router.Run(":" + cfg.Port); err != nil {

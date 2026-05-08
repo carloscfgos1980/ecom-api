@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -38,6 +39,36 @@ func GetProductsHandler(cfg *config.Config) gin.HandlerFunc {
 			})
 		}
 		// Send the list of products back to the client with a 200 OK status
+		c.JSON(http.StatusOK, response)
+	}
+}
+
+// GetProductByIDHandler is the handler for retrieving a single product by its ID
+func GetProductByIDHandler(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get the product ID from the URL parameters
+		id := c.Param("id")
+		//convert id to int64
+		idInt, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product ID"})
+			return
+		}
+		// Retrieve the product from the database using the provided configuration and product ID
+		product, err := cfg.DB.GetProductByID(context.Background(), idInt)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve product"})
+			return
+		}
+
+		// Prepare the response by converting the product from the database format to the API response format
+		response := Product{
+			ID:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       product.Price,
+		}
+		// Send the product back to the client with a 200 OK status
 		c.JSON(http.StatusOK, response)
 	}
 }

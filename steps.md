@@ -103,7 +103,7 @@ go run cmd/seed/main.go -mode export
 2. Register customer-related routes
  router.POST("/auth/login", handlers.LoginCustomerHandler(cfg))
 
-## 3. Get products
+## 5. Get products
 
 1. Product is the struct representing a product in the system /internal/habdlers/products_handler.go
 
@@ -115,3 +115,14 @@ go run cmd/seed/main.go -mode export
 
 3. Product routes
  router.GET("/products", handlers.GetProductsHandler(cfg))
+
+## 6. Get product by id
+
+1. GetProductByIDHandler is the handler for retrieving a single product by its ID /internal/handlers/products_handler.go
+1.1 Get the product ID from the URL parameters
+1.2 convert id to int64
+1.3 Retrieve the product from the database using the provided configuration and product ID
+1.4 Prepare the response by converting the product from the database format to the API response format
+1.5 Send the product back to the client with a 200 OK status
+2. Product routes
+ router.GET("/products/:id", handlers.GetProductByIDHandler(cfg))
