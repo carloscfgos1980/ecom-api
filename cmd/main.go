@@ -50,6 +50,9 @@ func main() {
 	router.POST("/auth/register", handlers.CreateCustomerHandler(cfg))
 	router.POST("/auth/login", handlers.LoginCustomerHandler(cfg))
 
+	// Product routes
+	router.GET("/products", handlers.GetProductsHandler(cfg))
+
 	// Start the server on the specified port
 	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Error starting server: %v", err)

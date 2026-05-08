@@ -103,3 +103,15 @@ go run cmd/seed/main.go -mode export
 2. Register customer-related routes
  router.POST("/auth/login", handlers.LoginCustomerHandler(cfg))
 
+## 3. Get products
+
+1. Product is the struct representing a product in the system /internal/habdlers/products_handler.go
+
+2. GetProductsHandler is the handler for retrieving a list of products
+2.1 Return a handler function that can be used in the Gin router
+2.2 Retrieve the list of products from the database using the provided configuration
+2.3 Prepare the response by converting the products from the database format to the API response format
+2.4 Send the list of products back to the client with a 200 OK status
+
+3. Product routes
+ router.GET("/products", handlers.GetProductsHandler(cfg))
