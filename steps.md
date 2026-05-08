@@ -69,7 +69,7 @@ go run cmd/seed/main.go -mode import
 go run cmd/seed/main.go -mode export
 ```
 
-## Register customer
+## 4.Register customer
 
 1. types to handle customer request and response internal/handlers/customer_habdler.go
 1.1 structs and handler for creating a new customer in the system
@@ -86,3 +86,20 @@ go run cmd/seed/main.go -mode export
 
 3. Register customer-related routes cmd/main.go
  router.POST("/auth/register", handlers.CreateCustomerHandler(cfg))
+
+## Login Customer
+
+1. LoginCustomerHandler is the handler for logging in a customer and generating a JWT token
+1.1 Define a response struct that includes the customer information and the generated token
+1.2 Return a handler function that can be used in the Gin router
+1.3 Bind the JSON request body to the CustomerRequest struct
+1.4 Validate email format
+1.5 Retrieve the customer from the database using the provided email
+1.6 Check if the provided password matches the stored hashed password
+1.7 Generate a JWT token for the authenticated customer
+1.8 Prepare the response with the authenticated customer's information and the generated token
+1.9 Send the response back to the client with a 200 OK status
+
+2. Register customer-related routes
+ router.POST("/auth/login", handlers.LoginCustomerHandler(cfg))
+

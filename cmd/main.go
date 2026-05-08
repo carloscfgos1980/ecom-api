@@ -48,6 +48,7 @@ func main() {
 	})
 	// Register customer-related routes
 	router.POST("/auth/register", handlers.CreateCustomerHandler(cfg))
+	router.POST("/auth/login", handlers.LoginCustomerHandler(cfg))
 
 	// Start the server on the specified port
 	if err := router.Run(":" + cfg.Port); err != nil {
