@@ -30,8 +30,8 @@ go get "github.com/golang-jwt/jwt/v5"
 
 ### 1. Path to the files
 
-XLS_FILE_PATH_READ="../../data/products_start.xls"
-XLS_FILE_PATH_WRITE="../../data/products_export.xlsx"
+XLS_FILE_PATH_READ="data/products_start.xls"
+XLS_FILE_PATH_WRITE="data/products_export.xlsx"
 
 Note: It does not allow me to create .xls, instead .xlsx. Also take in account that the path needs to go to levels up
 

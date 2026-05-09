@@ -2,11 +2,13 @@
 
 ## Project Description
 
-RestFul API with 2 endpoints:
+RestFul API with 3 endpoints:
 
-* customers
+* register costumer(auth -JWT)
 * products
 * orders
+
+* I use **chi** framework
 
 ## Main features
 
@@ -33,9 +35,6 @@ RestFul API with 2 endpoints:
 * Postgres
 * Migrations are running with **goose** using **pgx** package
 
-### routes
-
-* I use **chi** package
 
 ## ⚙️ Installation
 
