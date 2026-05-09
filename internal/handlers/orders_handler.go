@@ -289,6 +289,7 @@ func GetOrdersHandler(cfg *config.Config) gin.HandlerFunc {
 	}
 }
 
+// GetOrderByIDHandler is the handler for getting an order by ID
 func GetOrderByIDHandler(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the customer ID from the Gin context (set by the authentication middleware)
@@ -297,7 +298,7 @@ func GetOrderByIDHandler(cfg *config.Config) gin.HandlerFunc {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "customer ID not found in context"})
 			return
 		}
-		// Check if the customer is resgister
+		// Check if the customer is registered
 		_, err := cfg.DB.GetCustomerByID(context.Background(), customerID.(uuid.UUID))
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "customer not found"})
@@ -312,7 +313,9 @@ func GetOrderByIDHandler(cfg *config.Config) gin.HandlerFunc {
 		}
 		// Get the role query parameter to determine if the user is an admin or a customer
 		role := c.Query("role")
+		// If the role is admin, return the order with the specified ID. If the role is customer, return the order only if it belongs to the authenticated customer. If the role is not provided or is invalid, return a bad request error.
 		switch role {
+		//
 		case "admin":
 			// get the order by ID from the database
 			order, err := cfg.DB.GetOrderByID(context.Background(), orderID)
@@ -330,7 +333,9 @@ func GetOrderByIDHandler(cfg *config.Config) gin.HandlerFunc {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to get order items for order ID: %d", order.OrderID)})
 				return
 			}
+			// format the response with total as decimal with 2 places
 			total := 0.00
+			// Loop through the order items and get the product details for each item to prepare the response
 			responseItems := make([]itemsResponse, 0, len(orderItems))
 			for _, item := range orderItems {
 				// get product details for each order item
@@ -339,12 +344,16 @@ func GetOrderByIDHandler(cfg *config.Config) gin.HandlerFunc {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to get product details for product ID: %d", item.ProductID)})
 					return
 				}
+				// calculate subtotal for the item
 				unitPrice, err := strconv.ParseFloat(item.Price, 64)
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("invalid price format for product ID: %d", item.ProductID)})
 					return
 				}
 				subtotal := unitPrice * float64(item.Quantity)
+				// calculate total for the order
+				total += subtotal
+				// Item response with product details and subtotal
 				responseItems = append(responseItems, itemsResponse{
 					ProductID:   item.ProductID,
 					ProductName: product.Name,
@@ -352,8 +361,8 @@ func GetOrderByIDHandler(cfg *config.Config) gin.HandlerFunc {
 					Price:       Decimal2(unitPrice),
 					Subtotal:    Decimal2(subtotal),
 				})
-				total += subtotal
 			}
+			// prepare the order response
 			response := OrderResponse{
 				ID:         order.OrderID,
 				CustomerID: order.CustomerID,
@@ -361,7 +370,9 @@ func GetOrderByIDHandler(cfg *config.Config) gin.HandlerFunc {
 				Total:      Decimal2(total),
 				Items:      responseItems,
 			}
+			// send the order response back to the client with a 200 OK status
 			c.JSON(http.StatusOK, response)
+		// If the role is customer, return the order only if it belongs to the authenticated customer
 		case "customer":
 			// get the order by ID from the database
 			order, err := cfg.DB.GetOrderByID(context.Background(), orderID)
