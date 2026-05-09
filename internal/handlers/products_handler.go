@@ -47,7 +47,7 @@ func GetProductsHandler(cfg *config.Config) gin.HandlerFunc {
 func GetProductByIDHandler(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the product ID from the URL parameters
-		id := c.Param("id")
+		id := c.Param("productID")
 		//convert id to int64
 		idInt, err := strconv.ParseInt(id, 10, 64)
 		if err != nil {

@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -285,4 +287,139 @@ func GetOrdersHandler(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 	}
+}
+
+func GetOrderByIDHandler(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get the customer ID from the Gin context (set by the authentication middleware)
+		customerID, exists := c.Get("customerID")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "customer ID not found in context"})
+			return
+		}
+		// Check if the customer is resgister
+		_, err := cfg.DB.GetCustomerByID(context.Background(), customerID.(uuid.UUID))
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "customer not found"})
+			return
+		}
+		// Get the order ID from the URL parameter
+		orderIDParam := c.Param("orderID")
+		orderID, err := strconv.ParseInt(orderIDParam, 10, 64)
+		if err != nil || orderID <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order ID"})
+			return
+		}
+		// Get the role query parameter to determine if the user is an admin or a customer
+		role := c.Query("role")
+		switch role {
+		case "admin":
+			// get the order by ID from the database
+			order, err := cfg.DB.GetOrderByID(context.Background(), orderID)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
+					return
+				}
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get order"})
+				return
+			}
+			// get order items for the order
+			orderItems, err := cfg.DB.GetOrderItemsByOrderID(context.Background(), order.OrderID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to get order items for order ID: %d", order.OrderID)})
+				return
+			}
+			total := 0.00
+			responseItems := make([]itemsResponse, 0, len(orderItems))
+			for _, item := range orderItems {
+				// get product details for each order item
+				product, err := cfg.DB.GetProductByID(context.Background(), item.ProductID)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to get product details for product ID: %d", item.ProductID)})
+					return
+				}
+				unitPrice, err := strconv.ParseFloat(item.Price, 64)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("invalid price format for product ID: %d", item.ProductID)})
+					return
+				}
+				subtotal := unitPrice * float64(item.Quantity)
+				responseItems = append(responseItems, itemsResponse{
+					ProductID:   item.ProductID,
+					ProductName: product.Name,
+					Quantity:    item.Quantity,
+					Price:       Decimal2(unitPrice),
+					Subtotal:    Decimal2(subtotal),
+				})
+				total += subtotal
+			}
+			response := OrderResponse{
+				ID:         order.OrderID,
+				CustomerID: order.CustomerID,
+				CreatedAt:  order.CreatedAt.Time.Format("2006-01-02 15:04:05"),
+				Total:      Decimal2(total),
+				Items:      responseItems,
+			}
+			c.JSON(http.StatusOK, response)
+		case "customer":
+			// get the order by ID from the database
+			order, err := cfg.DB.GetOrderByID(context.Background(), orderID)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
+					return
+				}
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get order"})
+				return
+			}
+			// check if the order belongs to the authenticated customer
+			if order.CustomerID != customerID.(uuid.UUID) {
+				c.JSON(http.StatusForbidden, gin.H{"error": "you do not have permission to view this order"})
+				return
+			}
+			// get order items for the order
+			orderItems, err := cfg.DB.GetOrderItemsByOrderID(context.Background(), order.OrderID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to get order items for order ID: %d", order.OrderID)})
+				return
+			}
+			total := 0.00
+			responseItems := make([]itemsResponse, 0, len(orderItems))
+			for _, item := range orderItems {
+				// get product details for each order item
+				product, err := cfg.DB.GetProductByID(context.Background(), item.ProductID)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to get product details for product ID: %d", item.ProductID)})
+					return
+				}
+				unitPrice, err := strconv.ParseFloat(item.Price, 64)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("invalid price format for product ID: %d", item.ProductID)})
+					return
+				}
+				subtotal := unitPrice * float64(item.Quantity)
+				responseItems = append(responseItems, itemsResponse{
+					ProductID:   item.ProductID,
+					ProductName: product.Name,
+					Quantity:    item.Quantity,
+					Price:       Decimal2(unitPrice),
+					Subtotal:    Decimal2(subtotal),
+				})
+				total += subtotal
+			}
+			response := OrderResponse{
+				ID:         order.OrderID,
+				CustomerID: order.CustomerID,
+				CreatedAt:  order.CreatedAt.Time.Format("2006-01-02 15:04:05"),
+				Total:      Decimal2(total),
+				Items:      responseItems,
+			}
+			c.JSON(http.StatusOK, response)
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role query parameter"})
+			return
+		}
+	}
+
 }

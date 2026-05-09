@@ -202,3 +202,33 @@ Note: The rest of the steps are the same for adming, the ony different is that t
   apiGroup.GET("/orders", handlers.GetOrdersHandler(cfg))
 
  }
+
+## Get a order
+
+1. GetOrderByIDHandler is the handler for getting an order by ID /internal/handlers/orders_handler.go
+1.1 Get the customer ID from the Gin context (set by the authentication middleware)
+1.2 Check if the customer is registered
+1.3 Get the order ID from the URL parameter
+1.4 Get the role query parameter to determine if the user is an admin or a customer
+1.5 If the role is admin it does not have to match customer id. If the role is customer, return the order only if it belongs to the authenticated customer. If the role is not provided or is invalid, return a bad request error.
+1.6 case admin
+1.6.1 get the order by ID from the database
+1.6.2 get order items for the order
+1.6.3 format the response with total as decimal with 2 places
+1.6.4 Loop through the order items and get the product details for each item to prepare the response
+1.6.5 calculate subtotal for the item
+1.6.6 calculate total for the order
+1.6.7 Item response with product details and subtotal
+1.6.8 prepare the order response
+1.6.9 send the order response back to the client with a 200 OK status
+1.7 If the role is customer, return the order only if it belongs to the authenticated customer
+1.7.1 get the order by ID from the database
+1.7.2 check if the order belongs to the authenticated customer
+Note: The rest are the same steo that case admin. Just checking if the customerId from the request match the customerId in table orders
+
+2. Register order-related routes with authentication middleware cmd/main.go
+ apiGroup := router.Group("/api")
+ apiGroup.Use(middleware.AuthMiddleware(cfg))
+ {
+  apiGroup.GET("/orders/:orderID", handlers.GetOrderByIDHandler(cfg))
+ }

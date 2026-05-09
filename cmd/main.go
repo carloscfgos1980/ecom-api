@@ -53,7 +53,7 @@ func main() {
 
 	// Product routes
 	router.GET("/products", handlers.GetProductsHandler(cfg))
-	router.GET("/products/:id", handlers.GetProductByIDHandler(cfg))
+	router.GET("/products/:productID", handlers.GetProductByIDHandler(cfg))
 
 	// Register order-related routes with authentication middleware
 	apiGroup := router.Group("/api")
@@ -61,7 +61,7 @@ func main() {
 	{
 		apiGroup.POST("/orders", handlers.PlaceOrderHandler(cfg))
 		apiGroup.GET("/orders", handlers.GetOrdersHandler(cfg))
-
+		apiGroup.GET("/orders/:orderID", handlers.GetOrderByIDHandler(cfg))
 	}
 
 	// Start the server on the specified port
