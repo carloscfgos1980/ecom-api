@@ -60,6 +60,7 @@ func main() {
 	apiGroup.Use(middleware.AuthMiddleware(cfg))
 	{
 		apiGroup.POST("/orders", handlers.PlaceOrderHandler(cfg))
+		apiGroup.GET("/orders", handlers.GetOrdersHandler(cfg))
 
 	}
 

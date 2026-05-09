@@ -13,6 +13,11 @@ VALUES ($1, $2, $3, $4)
 SELECT * FROM orders
 ORDER BY created_at DESC;
 
+-- name: GetOrdersByCustomerID :many
+SELECT * FROM orders
+WHERE customer_id = $1
+ORDER BY created_at DESC;
+
 -- name: GetOrderItemsByOrderID :many
 SELECT oi.*, p.name AS product_name 
 FROM order_items oi

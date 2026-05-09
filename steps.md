@@ -175,3 +175,30 @@ go run cmd/seed/main.go -mode export
   apiGroup.POST("/orders", handlers.PlaceOrderHandler(cfg))
 
  }
+
+## 9.Get orders
+
+1. GetOrdersHandler is the handler for getting orders /internal/nadlers/order_handler.go
+1.1 Return a handler function that can be used in the Gin router
+1.2 Get the customer ID from the Gin context (set by the authentication middleware)
+1.3 Check if the customer is registered
+1.4 Get the role query parameter to determine if the user is an admin or a customer
+1.5 If the role is admin, return all orders. If the role is customer, return only the orders for the authenticated customer. If the role is not provided or is invalid, return a bad request error.
+1.5.1 get all orders from the database
+1.5.2 Loop through the orders and get the order items and product details for each order to prepare the response
+1.5.3 format the response with total as decimal with 2 places
+1.5.4 Loop through the order items and get the product details for each item to prepare the response
+1.5.4 Item response with product details and subtotal
+1.5.5 calculate total for the order
+1.5.6 Only include orders that have items in the response
+
+1.6 If the role is customer, return only the orders for the authenticated customer
+1.6.1 get orders for the authenticated customer from the database
+Note: The rest of the steps are the same for adming, the ony different is that the slice of orders will match customerID
+2. Register order-related routes with authentication middleware
+ apiGroup := router.Group("/api")
+ apiGroup.Use(middleware.AuthMiddleware(cfg))
+ {
+  apiGroup.GET("/orders", handlers.GetOrdersHandler(cfg))
+
+ }

@@ -160,6 +160,35 @@ func (q *Queries) GetOrders(ctx context.Context) ([]Order, error) {
 	return items, nil
 }
 
+const getOrdersByCustomerID = `-- name: GetOrdersByCustomerID :many
+SELECT order_id, customer_id, created_at FROM orders
+WHERE customer_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetOrdersByCustomerID(ctx context.Context, customerID uuid.UUID) ([]Order, error) {
+	rows, err := q.db.QueryContext(ctx, getOrdersByCustomerID, customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Order
+	for rows.Next() {
+		var i Order
+		if err := rows.Scan(&i.OrderID, &i.CustomerID, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateProductStock = `-- name: UpdateProductStock :exec
 UPDATE products
 SET quantity = $2, updated_at = NOW()
