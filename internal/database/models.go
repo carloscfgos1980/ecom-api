@@ -31,7 +31,7 @@ type OrderItem struct {
 	ProductID int64
 	Quantity  int32
 	Price     string
-	Subtotal  sql.NullString
+	Subtotal  int32
 }
 
 type Product struct {

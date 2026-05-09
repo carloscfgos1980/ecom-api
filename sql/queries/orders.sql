@@ -4,10 +4,10 @@ VALUES ($1
 ) RETURNING *;
 
 
--- name: CreateOrderItem :one
+-- name: CreateOrderItem :exec
 INSERT INTO order_items (order_id, product_id, quantity, price)
 VALUES ($1, $2, $3, $4)
-RETURNING *;
+;
 
 -- name: GetOrders :many
 SELECT * FROM orders

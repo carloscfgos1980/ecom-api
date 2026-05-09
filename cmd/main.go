@@ -9,6 +9,7 @@ import (
 	"github.com/carloscfgos1980/ecom-api/internal/config"
 	"github.com/carloscfgos1980/ecom-api/internal/database"
 	"github.com/carloscfgos1980/ecom-api/internal/handlers"
+	"github.com/carloscfgos1980/ecom-api/internal/middleware"
 
 	_ "github.com/lib/pq"
 )
@@ -53,6 +54,14 @@ func main() {
 	// Product routes
 	router.GET("/products", handlers.GetProductsHandler(cfg))
 	router.GET("/products/:id", handlers.GetProductByIDHandler(cfg))
+
+	// Register order-related routes with authentication middleware
+	apiGroup := router.Group("/api")
+	apiGroup.Use(middleware.AuthMiddleware(cfg))
+	{
+		apiGroup.POST("/orders", handlers.PlaceOrderHandler(cfg))
+
+	}
 
 	// Start the server on the specified port
 	if err := router.Run(":" + cfg.Port); err != nil {

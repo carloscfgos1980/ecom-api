@@ -25,10 +25,9 @@ func (q *Queries) CreateOrder(ctx context.Context, customerID uuid.UUID) (Order,
 	return i, err
 }
 
-const createOrderItem = `-- name: CreateOrderItem :one
+const createOrderItem = `-- name: CreateOrderItem :exec
 INSERT INTO order_items (order_id, product_id, quantity, price)
 VALUES ($1, $2, $3, $4)
-RETURNING id, order_id, product_id, quantity, price, subtotal
 `
 
 type CreateOrderItemParams struct {
@@ -38,23 +37,14 @@ type CreateOrderItemParams struct {
 	Price     string
 }
 
-func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error) {
-	row := q.db.QueryRowContext(ctx, createOrderItem,
+func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) error {
+	_, err := q.db.ExecContext(ctx, createOrderItem,
 		arg.OrderID,
 		arg.ProductID,
 		arg.Quantity,
 		arg.Price,
 	)
-	var i OrderItem
-	err := row.Scan(
-		&i.ID,
-		&i.OrderID,
-		&i.ProductID,
-		&i.Quantity,
-		&i.Price,
-		&i.Subtotal,
-	)
-	return i, err
+	return err
 }
 
 const getOrderByID = `-- name: GetOrderByID :one

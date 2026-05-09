@@ -138,3 +138,40 @@ go run cmd/seed/main.go -mode export
 2. Register order-related routes with authentication middleware
  ordersGroup := router.Group("/orders")
  ordersGroup.Use(middleware.AuthMiddleware(cfg))
+
+## 8. Place orders
+
+1. Create a type to return a number with 2 decimals
+1.1 Decimal2 marshals to JSON number with exactly two decimal places
+1.2 MarshalJSON implements the json.Marshaler interface for Decimal2.
+
+2. Types /internal/handlers/orders_handler.go
+2.1 orderItem represents an item in an order
+2.2 OrderResponse represents the response for an order
+2.3 itemsResponse represents the response for an order item
+
+3. PlaceOrderHandler is the handler for placing an order
+3.1 Return a handler function that can be used in the Gin router
+3.2 Get the customer ID from the Gin context (set by the authentication middleware)
+3.3 Check if the customer is resgister
+3.4 create a new order in the database with the customer ID and the current timestamp
+3.5 Bind the JSON body to a slice of orderItem structs
+3.6 Loop through the order items, check if the product exists and has enough stock, create order items in the database, and calculate the total price of the order
+3.7 look for the product if exists
+3.7.1 check if the product exists
+3.7.2 check if the product has enough stock
+3.7.3 create order item
+3.7.4 calculate subtotal for the item
+3.7.5 calculate total
+3.7.6 update product stock
+3.7.7 prepare the response item
+3.8 prepare the order response
+3.9 send the order response back to the client with a 200 OK status
+
+4. Register order-related routes with authentication middleware
+ apiGroup := router.Group("/api")
+ apiGroup.Use(middleware.AuthMiddleware(cfg))
+ {
+  apiGroup.POST("/orders", handlers.PlaceOrderHandler(cfg))
+
+ }
