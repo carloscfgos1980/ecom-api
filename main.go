@@ -70,6 +70,8 @@ func main() {
 	})
 	// Register the handler for creating a new customer
 	mux.HandleFunc("/auth/register", apiCfg.handlerUsersCreate)
+	// Register the handler for logging in a customer
+	mux.HandleFunc("/auth/login", apiCfg.handlerLogin)
 
 	log.Printf("Server is running http://localhost:%s", apiCfg.port)
 	// Listen and serve

@@ -76,3 +76,15 @@ git push origin no_framework
  mux.HandleFunc("/auth/register", apiCfg.handlerUsersCreate)
 
 ## 6. Login
+
+1. handlerLogin handles the login of a customer in the system
+1.1 Define the expected parameters for user login and the response structure
+1.2 Define the response structure for a successful login, including the customer's information and the generated JWT token
+1.3 Decode the JSON request body into the parameters struct
+1.4 Retrieve the customer from the database using the provided email address
+1.5 Check if the provided password matches the hashed password stored in the database for the retrieved customer
+1.6 If the password is correct, generate a JWT token for the customer to authenticate future requests
+1.7 Respond with the customer's information (excluding the password) and the generated JWT token
+
+2. Register the handler for logging in a customer
+ mux.HandleFunc("/auth/login", apiCfg.handlerLogin)
