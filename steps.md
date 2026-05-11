@@ -14,6 +14,12 @@ go get github.com/lib/pq
 * install uuid package
 go get github.com/google/uuid
 
+* install package to hash password
+go get github.com/alexedwards/argon2id
+
+* install package to create and verify jwt token
+go get github.com/golang-jwt/jwt/v5
+
 ## 2. Setup /main.go
 
 1. Load environment variables from .env file
@@ -36,3 +42,37 @@ go run cmd/seed/main.go -mode import
 go run cmd/seed/main.go -mode export
 ```
 
+## 4. First commit to Github
+
+```bash
+git init
+git add .
+git commit -m "first commit"
+git remote add origin https://github.com/carloscfgos1980/ecom-api.git
+git checkout -b no-framework
+git push origin no_framework
+```
+
+## 5. Register customer
+
+1. auxiliary functions to response with JSON /json.go
+1.1 Helper functions for responding with JSON and error messages in the API handlers
+1.2 respondWithJSON is a helper function to send JSON responses with a given HTTP status code and payload
+
+2. structs and handler for creating a new customer in the system /handler_users_create.go
+3. handlerUsersCreate handles the creation of a new customer in the system
+3.1 Define the expected parameters for creating a new customer and the response structure
+3.2 Define the response structure for a single customer
+3.3 Decode the JSON request body into the parameters struct
+3.4 Validate the provided parameters (e.g., check if email is valid, password meets criteria, etc.)
+3.5 strong password validation can be added here before hashing the password and creating the customer in the database
+3.6 Check if a customer with the provided email already exists in the database
+3.7 If the error is not sql.ErrNoRows, it means there was an issue querying the database
+3.8 Hash the customer's password before storing it in the database
+3.9 Create a new customer in the database using the provided parameters and the hashed password
+3.10 Respond with the created customer's information (excluding the password)
+
+4. Register the handler for creating a new customer /main.go
+ mux.HandleFunc("/auth/register", apiCfg.handlerUsersCreate)
+
+## 6. Login
