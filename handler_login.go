@@ -17,7 +17,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	// Define the response structure for a successful login, including the customer's information and the generated JWT token
 	type response struct {
-		Customer
+		CustomerResponse
 		Token string `json:"token"`
 	}
 	// Decode the JSON request body into the parameters struct
@@ -50,15 +50,16 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create JWT token", err)
 		return
 	}
-
 	// Respond with the customer's information (excluding the password) and the generated JWT token
-	respondWithJSON(w, http.StatusOK, response{
-		Customer: Customer{
+	resp := response{
+		CustomerResponse: CustomerResponse{
 			ID:        customer.ID,
 			Email:     customer.Email,
 			CreatedAt: customer.CreatedAt,
 			UpdatedAt: customer.UpdatedAt,
 		},
 		Token: token,
-	})
+	}
+	// Respond with the customer's information (excluding the password) and the generated JWT token
+	respondWithJSON(w, http.StatusOK, resp)
 }

@@ -88,3 +88,25 @@ git push origin no_framework
 
 2. Register the handler for logging in a customer
  mux.HandleFunc("/auth/login", apiCfg.handlerLogin)
+
+## 7. Get products
+
+1. ProductResponse defines the structure of the response for a single product /handler_products_get.go
+2. handlerProductsGet handles the retrieval of all products in the system
+2.1 Retrieve all products from the database
+2.2 Define the response structure for a list of products
+2.3 Convert the retrieved products to the response format
+2.4 Respond with the list of products in JSON format
+3. Register the handler for retrieving all products
+ mux.HandleFunc("GET /products", apiCfg.handlerProductsGet)
+
+## 8. Get product by Id 
+
+1.handlerProductsGetByID handles the retrieval of a single product by its ID /handler_products_get.go
+1.1 Extract the product ID from the URL path or query parameters
+1.2 Validate the provided product ID (e.g., check if it's a valid integer, etc.)
+1.3 Retrieve the product from the database using the provided ID
+1.4 Define the response structure for a single product
+1.5 Respond with the product information in JSON format
+2. Register the handler for retrieving a product by ID /main.go
+mux.HandleFunc("GET /products/{productID}", apiCfg.handlerProductsGetByID)
