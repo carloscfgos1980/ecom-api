@@ -100,7 +100,7 @@ git push origin no_framework
 3. Register the handler for retrieving all products
  mux.HandleFunc("GET /products", apiCfg.handlerProductsGet)
 
-## 8. Get product by Id 
+## 8. Get product by Id
 
 1.handlerProductsGetByID handles the retrieval of a single product by its ID /handler_products_get.go
 1.1 Extract the product ID from the URL path or query parameters
@@ -110,3 +110,35 @@ git push origin no_framework
 1.5 Respond with the product information in JSON format
 2. Register the handler for retrieving a product by ID /main.go
 mux.HandleFunc("GET /products/{productID}", apiCfg.handlerProductsGetByID)
+
+## 9. Place order
+
+1. Types /handler_order_create
+1.1 Decimal2 marshals to JSON number with exactly two decimal places.
+1.2 MarshalJSON implements the json.Marshaler interface for Decimal2.
+1.3 orderItem represents an item in an order
+1.4 OrderResponse represents the response for an order
+1.5 itemsResponse represents the response for an order item
+
+2. handlerOrderCreate handles the placement of an order by a customer in the system
+2.1 Extract the JWT token from the Authorization header
+2.2 Validate JWT and get customer ID
+2.3 Check if the customer exists in the database
+2.4 Define the expected parameters for placing an order and the response structure
+2.5 Decode the JSON request body into the parameters struct
+2.6 Validate the provided parameters (e.g., check if items are valid, quantities are positive, etc.)
+2.7 Create a new order in the database using the provided parameters and the authenticated customer's ID
+2.8 Initialize total price for the order and prepare the response items for the order response
+2.9 Create order items in the database for each item in the order
+2.9.1 check if the quantity is greater than zero
+2.9.2 check if the product exists in the database
+2.9.3 heck if the product has enough quantity in stock
+2.9.4 create the order item in the database
+2.9.5 update the product quantity in the database
+2.9.6 convert price and subtotal to Decimal2 for consistent JSON formatting
+2.9.7 calculate the subtotal for the order item and add it to the total price for the order
+2.9.8 prepare the response items for the order response
+2.10 prepare the order response
+2.11 Respond with the created order's information in JSON format
+3. Register the handler for placing an order
+ mux.HandleFunc("POST /api/orders", apiCfg.handlerOrderCreate)
