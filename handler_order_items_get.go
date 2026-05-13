@@ -152,6 +152,7 @@ func (cfg *apiConfig) handlerOrdersItemsGet(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+// handlerOrderItemsGetByOrderID handles the retrieval of a single order and its items by the order ID for a customer in the system
 func (cfg *apiConfig) handlerOrderItemsGetByOrderID(w http.ResponseWriter, r *http.Request) {
 	// Extract the JWT token from the Authorization header
 	token, err := auth.GetBearerToken(r.Header)
@@ -186,6 +187,7 @@ func (cfg *apiConfig) handlerOrderItemsGetByOrderID(w http.ResponseWriter, r *ht
 	role := r.URL.Query().Get("role")
 	// Based on the role, retrieve the appropriate order and its items for the authenticated customer or any order if the user is an admin
 	switch role {
+	// If the role is admin, get the order and its items for any order, otherwise if the role is customer, get the order and its items for the authenticated customer
 	case "admin":
 		// If the role is admin, get the order and its items for any order
 		order, err := cfg.db.GetOrderByID(r.Context(), orderID)
@@ -199,21 +201,27 @@ func (cfg *apiConfig) handlerOrderItemsGetByOrderID(w http.ResponseWriter, r *ht
 			respondWithError(w, http.StatusInternalServerError, "Couldn't get order items", err)
 			return
 		}
+		// Calculate the total and prepare the response items for the order
 		total := Decimal2(0)
 		responseItems := make([]itemsResponse, 0, len(orderItems))
+		// Loop through the order items to get the product details and calculate the subtotal for each item, as well as the total for the order
 		for _, item := range orderItems {
+			// Get the product details for the current order item to include in the response and calculate the subtotal and total for the order
 			product, err := cfg.db.GetProductByID(r.Context(), item.ProductID)
 			if err != nil {
 				respondWithError(w, http.StatusInternalServerError, "Couldn't get product details", err)
 				return
 			}
+			// Convert the product price from string to float64 to calculate the subtotal and total for the order
 			price, err := strconv.ParseFloat(product.Price, 64)
 			if err != nil {
 				respondWithError(w, http.StatusInternalServerError, "Invalid product price", err)
 				return
 			}
+			// Calculate the subtotal for the current order item and add it to the total for the order, as well as prepare the response item with the product details, quantity, price, and subtotal
 			subtotal := Decimal2(float64(item.Quantity) * price)
 			total += subtotal
+			// Append the current order item with the product details, quantity, price, and subtotal to the response items for the order
 			responseItems = append(responseItems, itemsResponse{
 				ProductID:   item.ProductID,
 				ProductName: product.Name,
@@ -222,6 +230,7 @@ func (cfg *apiConfig) handlerOrderItemsGetByOrderID(w http.ResponseWriter, r *ht
 				Subtotal:    subtotal,
 			})
 		}
+		// Prepare the response with the order details, total, and response items to be returned in the response
 		response := OrderResponse{
 			ID:         order.OrderID,
 			CustomerID: order.CustomerID,
@@ -231,6 +240,7 @@ func (cfg *apiConfig) handlerOrderItemsGetByOrderID(w http.ResponseWriter, r *ht
 		}
 		// Respond with the order and its items in JSON format
 		respondWithJSON(w, http.StatusOK, response)
+	// If the role is customer, get the order and its items for the authenticated customer
 	case "customer":
 		// If the role is customer, get the order and its items for the authenticated customer
 		order, err := cfg.db.GetOrderByID(r.Context(), orderID)
@@ -257,21 +267,26 @@ func (cfg *apiConfig) handlerOrderItemsGetByOrderID(w http.ResponseWriter, r *ht
 			respondWithError(w, http.StatusInternalServerError, "Couldn't get order items", err)
 			return
 		}
+		// Calculate the total and prepare the response items for the order
 		total := Decimal2(0)
 		responseItems := make([]itemsResponse, 0, len(orderItems))
+		// Loop through the order items to get the product details and calculate the subtotal for each item, as well as the total for the order
 		for _, item := range orderItems {
 			product, err := cfg.db.GetProductByID(r.Context(), item.ProductID)
 			if err != nil {
 				respondWithError(w, http.StatusInternalServerError, "Couldn't get product details", err)
 				return
 			}
+			// Convert the product price from string to float64 to calculate the subtotal and total for the order
 			price, err := strconv.ParseFloat(product.Price, 64)
 			if err != nil {
 				respondWithError(w, http.StatusInternalServerError, "Invalid product price", err)
 				return
 			}
+			// Calculate the subtotal for the current order item and add it to the total for the order, as well as prepare the response item with the product details, quantity, price, and subtotal
 			subtotal := Decimal2(float64(item.Quantity) * price)
 			total += subtotal
+			// Append the current order item with the product details, quantity, price, and subtotal to the response items for the order
 			responseItems = append(responseItems, itemsResponse{
 				ProductID:   item.ProductID,
 				ProductName: product.Name,
@@ -280,6 +295,7 @@ func (cfg *apiConfig) handlerOrderItemsGetByOrderID(w http.ResponseWriter, r *ht
 				Subtotal:    subtotal,
 			})
 		}
+		// Prepare the response with the order details, total, and response items to be returned in the response
 		response := OrderResponse{
 			ID:         order.OrderID,
 			CustomerID: order.CustomerID,

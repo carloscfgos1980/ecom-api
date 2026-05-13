@@ -171,6 +171,29 @@ Note: the resto of steps are the same as admin, the only different in the list o
 2. Register the handler for retrieving all orders and their items for a customer
  mux.HandleFunc("GET /api/orders", apiCfg.handlerOrdersItemsGet)
 
-
 ## 11 Get a order and its list of items
 
+1. handlerOrderItemsGetByOrderID handles the retrieval of a single order and its items by the order ID for a customer in the system
+1.1 Extract the JWT token from the Authorization header
+1.2 Validate JWT and get customer ID
+1.3 Check if the customer exists in the database
+1.4 Extract the order ID from the URL path or query parameters
+1.5 Validate the provided order ID (e.g., check if it's a valid integer, etc.)
+1.6 Get the role query parameter to determine if the user is an admin or a customer
+1.7 Based on the role, retrieve the appropriate order and its items for the authenticated customer or any order if the user is an admin
+1.7.1 If the role is admin, get the order and its items for any order, otherwise if the role is customer, get the order and its items for the authenticated customer
+1.7.1.1 If the role is admin, get the order and its items for any order
+1.7.1.2 Get the order items and product details for the order to prepare the response
+1.7.1.3 Calculate the total and prepare the response items for the order
+1.7.1.4 Loop through the order items to get the product details and calculate the subtotal for each item, as well as the total for the order
+1.7.1.5 Get the product details for the current order item to include in the response and calculate the subtotal and total for the order
+1.7.1.6 Convert the product price from string to float64 to calculate the subtotal and total for the order
+1.7.1.7 Calculate the subtotal for the current order item and add it to the total for the order, as well as prepare the response item with the product details, quantity, price, and subtotal
+1.7.1.8 Append the current order item with the product details, quantity, price, and subtotal to the response items for the order
+1.7.1.9 Prepare the response with the order details, total, and response items to be returned in the response
+1.7.1.10 Respond with the order and its items in JSON format
+1.7.2 If the role is customer, get the order and its items for the authenticated customer
+1.7.2.1 If the role is customer, get the order and its items for the authenticated customer
+1.7.2.2 check if the order belongs to the authenticated customer
+Note: the rest is just like admin case
+1.7.3 If the role query parameter is missing or invalid, respond with a bad request error
