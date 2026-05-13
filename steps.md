@@ -142,3 +142,35 @@ mux.HandleFunc("GET /products/{productID}", apiCfg.handlerProductsGetByID)
 2.11 Respond with the created order's information in JSON format
 3. Register the handler for placing an order
  mux.HandleFunc("POST /api/orders", apiCfg.handlerOrderCreate)
+
+## 10. Get order and its list of items
+
+1. handlerOrdersItemsGet handles of all orders and their items for a customer in the system
+1.1 Extract the JWT token from the Authorization header
+1.2 Validate JWT and get customer ID
+1.3 Check if the customer exists in the database
+1.4 Get the role query parameter to determine if the user is an admin or a customer
+1.5 Based on the role, retrieve the appropriate orders and their items for the authenticated customer or all customers if the user is an admin
+1.5.1 If the role is admin, get all orders and their items for all customers
+1.5.1.1 get all orders and their items for all customers
+1.5.1.2 ordersResponse will hold the list of orders and their items to be returned in the response
+1.5.1.3 Loop through the orders and get the order items and product details for each order to prepare the response
+1.5.1.4 Calculate the total and prepare the response items for the order
+1.5.1.5 Loop through the order items to get the product details and calculate the subtotal for each item, as well as the total for the order
+1.5.1.6 Get the product details for the current order item to include in the response and calculate the subtotal and total for the order
+1.5.1.7 Convert the product price from string to float64 to calculate the subtotal and total for the order
+1.5.1.8 Calculate the subtotal for the current order item and add it to the total for the order, as well as prepare the response item with the product details, quantity, price, and subtotal
+1.5.1.9 Append the current order item with the product details, quantity, price, and subtotal to the response items for the order
+1.5.1.10 Append the current order with its details, total, and response items to the ordersResponse to be returned in the response
+1.5.1.11 Respond with the list of orders and their items in JSON format
+1.5.2 If the role is customer, get all orders and their items for the authenticated customer
+1.5.2.1 If the role is customer, get all orders and their items for the authenticated customer
+Note: the resto of steps are the same as admin, the only different in the list of orders
+1.6 If the role query parameter is missing or invalid, respond with a bad request error
+
+2. Register the handler for retrieving all orders and their items for a customer
+ mux.HandleFunc("GET /api/orders", apiCfg.handlerOrdersItemsGet)
+
+
+## 11 Get a order and its list of items
+

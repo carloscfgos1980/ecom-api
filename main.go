@@ -78,6 +78,10 @@ func main() {
 	mux.HandleFunc("GET /products/{productID}", apiCfg.handlerProductsGetByID)
 	// Register the handler for placing an order
 	mux.HandleFunc("POST /api/orders", apiCfg.handlerOrderCreate)
+	// Register the handler for retrieving all orders and their items for a customer
+	mux.HandleFunc("GET /api/orders", apiCfg.handlerOrdersItemsGet)
+	// Register the handler for retrieving a specific order and its items by order ID
+	mux.HandleFunc("GET /api/orders/{orderID}", apiCfg.handlerOrderItemsGetByOrderID)
 	// Log the server start and the URL it's running on
 
 	log.Printf("Server is running http://localhost:%s", apiCfg.port)
