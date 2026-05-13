@@ -13,7 +13,7 @@ import (
 
 // apiConfig holds the dependencies for the API handlers.
 type apiConfig struct {
-	db        *database.Queries
+	db        DB
 	jwtSecret string
 	port      string
 }
